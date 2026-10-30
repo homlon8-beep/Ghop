@@ -79,6 +79,14 @@ class FlowBrowserEngine {
         '--disable-gpu',
         '--no-zygote',
         '--single-process',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-extensions',
+        '--disable-sync',
+        '--disable-translate',
+        '--mute-audio',
+        '--no-first-run',
+        '--js-flags=--max-old-space-size=160',
         '--window-size=1280,800'
       ],
       defaultViewport: { width: 1280, height: 800 }
@@ -344,19 +352,25 @@ class FlowBrowserEngine {
         }
       }
 
-      // 3. Master into Crystal-Clear 1080x1920 Full HD (16.0s exact, lanczos upscale, unsharp edge sharpening)
+      // 3. Close browser FIRST to free container RAM before running FFmpeg
+      try {
+        await browser.close();
+        console.log(`[FlowBrowserEngine] Closed browser to free container memory before mastering.`);
+      } catch (e) {}
+
+      // 4. Master into Crystal-Clear 1080x1920 Full HD (16.0s exact, bicubic upscale, 30fps)
       console.log(`\n[FlowBrowserEngine] 🎛️ Mastering final 16-second Reel in Full HD 1080x1920 with FFmpeg...`);
       const finalOutputPath = path.join(this.outputDir, `veo_reel_master_${Date.now()}.mp4`);
 
       if (shot2Path && fs.existsSync(shot2Path)) {
         // True 2-Shot Narrative Concatenation (Shot 1 + Shot 2 = 16s exact, NO LOOPING)
         console.log(`[FlowBrowserEngine] 🎬 Concatenating Shot 1 + Shot 2 into true 16-second narrative film!`);
-        const concatCmd = `ffmpeg -y -i "${shot1Path}" -i "${shot2Path}" -filter_complex "[0:v][1:v]concat=n=2:v=1[cv];[cv]scale=1080:1920:flags=lanczos,unsharp=3:3:0.4:3:3:0.0,fps=30[outv]" -map "[outv]" -c:v libx264 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 12M -maxrate 15M -bufsize 20M -g 60 -movflags +faststart "${finalOutputPath}"`;
+        const concatCmd = `ffmpeg -y -i "${shot1Path}" -i "${shot2Path}" -filter_complex "[0:v][1:v]concat=n=2:v=1[cv];[cv]scale=1080:1920:flags=bicubic,fps=30[outv]" -map "[outv]" -c:v libx264 -preset veryfast -crf 20 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 8M -maxrate 12M -bufsize 16M -g 60 -movflags +faststart "${finalOutputPath}"`;
         execSync(concatCmd, { stdio: 'ignore' });
       } else {
         // Single Shot Mastered to 1080x1920 with high-bitrate stream-loop to guarantee 16s
         console.log(`[FlowBrowserEngine] 🎬 Mastering Shot 1 into 1080x1920 Full HD Reel...`);
-        const singleCmd = `ffmpeg -y -stream_loop 1 -i "${shot1Path}" -vf "scale=1080:1920:flags=lanczos,unsharp=3:3:0.4:3:3:0.0,fps=30" -c:v libx264 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 12M -maxrate 15M -bufsize 20M -g 60 -movflags +faststart "${finalOutputPath}"`;
+        const singleCmd = `ffmpeg -y -stream_loop 1 -i "${shot1Path}" -vf "scale=1080:1920:flags=bicubic,fps=30" -c:v libx264 -preset veryfast -crf 20 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 8M -maxrate 12M -bufsize 16M -g 60 -movflags +faststart "${finalOutputPath}"`;
         execSync(singleCmd, { stdio: 'ignore' });
       }
 
@@ -384,7 +398,9 @@ class FlowBrowserEngine {
       } catch (e) {}
       throw err;
     } finally {
-      await browser.close();
+      try {
+        if (browser && browser.isConnected()) await browser.close();
+      } catch (e) {}
     }
   }
 }
