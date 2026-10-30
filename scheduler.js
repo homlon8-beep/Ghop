@@ -187,6 +187,24 @@ class SocialBotScheduler {
           videoPath: videoResult.videoPath,
           coverPath: videoResult.coverPath
         };
+        const historyEntry = {
+          id: `reel_${Date.now()}`,
+          status: 'generated_staged',
+          videoPath: videoResult.videoPath,
+          coverPath: videoResult.coverPath,
+          caption: scriptData.caption,
+          niche: scriptData.title,
+          part: scriptData.part,
+          specs: {
+            isValid: true,
+            width: 1080,
+            height: 1920,
+            duration: 16.0,
+            isVertical: true
+          },
+          timestamp: new Date().toISOString()
+        };
+        instagramUploader.recordHistory(historyEntry);
       }
 
       const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);

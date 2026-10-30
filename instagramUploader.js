@@ -122,13 +122,40 @@ class InstagramUploader {
   async authenticate() {
     const username = this.configData.username || config.INSTAGRAM.USERNAME;
     const password = this.configData.password || config.INSTAGRAM.PASSWORD;
+    const sessionId = this.configData.sessionId || process.env.IG_SESSION_ID;
+
+    this.ig.state.generateDevice(username || 'feticid');
+
+    // 1. Direct session cookie authentication (bypasses checkpoint & needs_upgrade completely)
+    if (sessionId) {
+      try {
+        console.log(`[InstagramUploader] Authenticating using Instagram sessionid cookie...`);
+        const cleanSessionId = sessionId.trim().replace(/^sessionid=/i, '');
+        await this.ig.state.cookieJar.setCookie(
+          `sessionid=${cleanSessionId}; Domain=.instagram.com; Path=/; Secure; HttpOnly`,
+          'https://instagram.com'
+        );
+        const userId = cleanSessionId.split('%3A')[0] || cleanSessionId.split(':')[0];
+        if (userId && !isNaN(Number(userId))) {
+          this.ig.state.cookieUserId = userId;
+          await this.ig.state.cookieJar.setCookie(
+            `ds_user_id=${userId}; Domain=.instagram.com; Path=/; Secure`,
+            'https://instagram.com'
+          );
+        }
+        const currentUser = await this.ig.account.currentUser();
+        console.log(`[InstagramUploader] Session successfully verified for @${currentUser.username} (${currentUser.pk})!`);
+        this.isLoggedIn = true;
+        return true;
+      } catch (sessErr) {
+        console.warn(`[InstagramUploader] sessionid cookie failed validation: ${sessErr.message}`);
+      }
+    }
 
     if (!username || !password || username.includes('YOUR_') || password.includes('YOUR_')) {
       console.log(`[InstagramUploader] No Instagram credentials configured. Running in Staging / Simulation mode.`);
       return false;
     }
-
-    this.ig.state.generateDevice(username);
 
     // Check for saved session state to avoid checkpoint triggers
     if (fs.existsSync(this.sessionFile)) {
@@ -171,6 +198,30 @@ class InstagramUploader {
       }
       return false;
     }
+  }
+
+  async updateProfile({ bio, avatarPath }) {
+    console.log(`[InstagramUploader] Syncing profile picture & bio to Instagram...`);
+    const hasAuth = await this.authenticate();
+    if (!hasAuth || !this.isLoggedIn) {
+      throw new Error('Not logged into Instagram. Please provide sessionid cookie in Settings to authenticate.');
+    }
+
+    const results = {};
+    if (avatarPath && fs.existsSync(avatarPath)) {
+      console.log(`[InstagramUploader] Changing profile picture from ${avatarPath}...`);
+      const picBuffer = fs.readFileSync(avatarPath);
+      results.picture = await this.ig.account.changeProfilePicture(picBuffer);
+      console.log(`[InstagramUploader] Profile picture updated successfully!`);
+    }
+
+    if (bio) {
+      console.log(`[InstagramUploader] Setting biography...`);
+      results.bio = await this.ig.account.setBiography(bio);
+      console.log(`[InstagramUploader] Biography updated successfully!`);
+    }
+
+    return { success: true, ...results };
   }
 
   async publishReel({ videoPath, coverPath, caption, scriptData }) {

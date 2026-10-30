@@ -218,17 +218,15 @@ app.post('/api/save-flow-accounts', (req, res) => {
   }
 });
 
-// Save / Update Instagram Credentials
+// Save / Update Instagram Credentials & Session
 app.post('/api/save-ig', async (req, res) => {
   try {
-    const { username, password, simulationMode } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ success: false, error: 'Username and password required' });
-    }
+    const { username, password, simulationMode, sessionId } = req.body;
 
     const igConfig = {
-      username: username.trim(),
-      password: password.trim(),
+      username: (username || '').trim(),
+      password: (password || '').trim(),
+      sessionId: (sessionId || '').trim(),
       simulationMode: Boolean(simulationMode),
       updatedAt: new Date().toISOString()
     };
@@ -239,35 +237,53 @@ app.post('/api/save-ig', async (req, res) => {
     const envPath = path.join(__dirname, '.env');
     let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
     
-    // Replace or append
-    if (envContent.includes('IG_USERNAME=')) {
-      envContent = envContent.replace(/IG_USERNAME=.*(\r?\n|$)/g, `IG_USERNAME=${igConfig.username}\n`);
-    } else {
-      envContent += `\nIG_USERNAME=${igConfig.username}`;
+    if (igConfig.username) {
+      if (envContent.includes('IG_USERNAME=')) {
+        envContent = envContent.replace(/IG_USERNAME=.*(\r?\n|$)/g, `IG_USERNAME=${igConfig.username}\n`);
+      } else {
+        envContent += `\nIG_USERNAME=${igConfig.username}`;
+      }
+      process.env.IG_USERNAME = igConfig.username;
     }
     
-    if (envContent.includes('IG_PASSWORD=')) {
-      envContent = envContent.replace(/IG_PASSWORD=.*(\r?\n|$)/g, `IG_PASSWORD=${igConfig.password}\n`);
-    } else {
-      envContent += `\nIG_PASSWORD=${igConfig.password}`;
+    if (igConfig.password) {
+      if (envContent.includes('IG_PASSWORD=')) {
+        envContent = envContent.replace(/IG_PASSWORD=.*(\r?\n|$)/g, `IG_PASSWORD=${igConfig.password}\n`);
+      } else {
+        envContent += `\nIG_PASSWORD=${igConfig.password}`;
+      }
+      process.env.IG_PASSWORD = igConfig.password;
     }
 
-    if (envContent.includes('IG_SIMULATION_MODE=')) {
-      envContent = envContent.replace(/IG_SIMULATION_MODE=.*(\r?\n|$)/g, `IG_SIMULATION_MODE=${igConfig.simulationMode}\n`);
-    } else {
-      envContent += `\nIG_SIMULATION_MODE=${igConfig.simulationMode}`;
+    if (igConfig.sessionId) {
+      if (envContent.includes('IG_SESSION_ID=')) {
+        envContent = envContent.replace(/IG_SESSION_ID=.*(\r?\n|$)/g, `IG_SESSION_ID=${igConfig.sessionId}\n`);
+      } else {
+        envContent += `\nIG_SESSION_ID=${igConfig.sessionId}`;
+      }
+      process.env.IG_SESSION_ID = igConfig.sessionId;
     }
 
     fs.writeFileSync(envPath, envContent.trim() + '\n');
+    instagramUploader.configData = instagramUploader.loadConfig();
 
-    // Update runtime config
-    process.env.IG_USERNAME = igConfig.username;
-    process.env.IG_PASSWORD = igConfig.password;
-    process.env.IG_SIMULATION_MODE = String(igConfig.simulationMode);
-
-    console.log(`✅ [IG Config] Updated credentials for @${igConfig.username}`);
-    res.json({ success: true, message: `Instagram credentials saved for @${igConfig.username}` });
+    console.log(`✅ [IG Config] Updated credentials for @${igConfig.username || 'feticid'}`);
+    res.json({ success: true, message: `Instagram configuration saved successfully!` });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Sync Profile Picture & Biography to Instagram Live
+app.post('/api/sync-profile', async (req, res) => {
+  try {
+    console.log('🎨 [Dashboard Trigger] Syncing profile picture & bio to Instagram live...');
+    const avatarPath = path.join(__dirname, 'public', 'avatar.jpg');
+    const bioText = "🌀 The Surreal Multiverse\n🏀 Where everyday things transform into insanity\n🍿 Daily Sagas: Pt 1 Morning • Pt 2 Evening\n👇 Watch till the end!";
+    const result = await instagramUploader.updateProfile({ bio: bioText, avatarPath });
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Sync profile failed:', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

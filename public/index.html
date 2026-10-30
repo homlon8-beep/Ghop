@@ -585,12 +585,17 @@
             Trigger immediate AI reel generation. The Groq brain remembers active saga state and chooses Part 1 or Part 2 automatically.
           </p>
 
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; margin-bottom: 16px; cursor: pointer; background: rgba(0,0,0,0.3); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--card-border);">
+            <input type="checkbox" id="liveUploadCheck" style="width: 18px; height: 18px; accent-color: var(--purple);" checked>
+            <span>🚀 Publish Directly to Instagram (@feticid) Live</span>
+          </label>
+
           <div style="display: flex; flex-direction: column; gap: 12px;">
             <button class="btn btn-purple" style="padding: 16px;" onclick="triggerPart1()">
-              <span>🌀 Generate Part 1 (Morning Hook & Cliffhanger)</span>
+              <span>🌀 Generate & Publish Part 1 (Hook & Cliffhanger)</span>
             </button>
             <button class="btn btn-cyan" style="padding: 16px;" onclick="triggerPart2()">
-              <span>🍿 Generate Part 2 (Evening Finale Resolution)</span>
+              <span>🍿 Generate & Publish Part 2 (Finale Resolution)</span>
             </button>
             <button class="btn btn-gold" style="padding: 16px;" onclick="triggerGenerateOnly()">
               <span>🎬 Generate & Preview 16s Video (No Post)</span>
@@ -655,6 +660,10 @@
 🍿 Daily Sagas: Pt 1 Morning • Pt 2 Evening
 👇 Watch what happens next!</textarea>
           </div>
+
+          <button class="btn btn-gold" style="width: 100%; padding: 14px; margin-top: 8px;" onclick="syncBioLive()">
+            <span>🚀 Sync Bio & PFP Directly to Instagram Live</span>
+          </button>
         </div>
 
         <!-- TAB 4: SETTINGS & ACCOUNTS -->
@@ -673,10 +682,22 @@
             <span>Save Groq Settings</span>
           </button>
 
-          <h4 style="margin-bottom: 12px; font-size: 15px;">Instagram Credentials / Session Cookie</h4>
+          <h4 style="margin-bottom: 12px; font-size: 15px;">Instagram Credentials & Direct Session Cookie</h4>
+          
+          <div class="form-group" style="padding: 16px; background: rgba(192, 132, 252, 0.1); border: 1px solid var(--purple); border-radius: 12px; margin-bottom: 16px;">
+            <label class="form-label" style="color: var(--purple); font-size: 14px;">🔑 Instagram sessionid Cookie (Bypasses All Checkpoints)</label>
+            <input class="form-input" id="cfgIgSession" placeholder="Paste sessionid cookie from instagram.com (e.g. 654321%3A...)">
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
+              💡 <strong>How to get in 10 seconds:</strong><br>
+              1. Log into <code>instagram.com</code> on Chrome/Safari on your phone or PC.<br>
+              2. In address bar, type <code>javascript:alert(document.cookie)</code> or open DevTools ➔ Application ➔ Cookies ➔ copy the <code>sessionid</code> value.<br>
+              3. Paste it above and click Save!
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Instagram Username</label>
-            <input class="form-input" id="cfgIgUser" value="webifycrafts">
+            <input class="form-input" id="cfgIgUser" value="feticid">
           </div>
           <div class="form-group">
             <label class="form-label">Instagram Password</label>
@@ -845,17 +866,23 @@
     }
 
     async function triggerPart1() {
-      showToast('🌀 Groq is crafting PART 1 (Morning Hook & Cliffhanger)...');
+      const isLiveUpload = document.getElementById('liveUploadCheck') ? document.getElementById('liveUploadCheck').checked : true;
+      showToast(isLiveUpload ? '🌀 Groq is generating & publishing PART 1 to Instagram...' : '🌀 Groq is crafting PART 1 preview video...');
       try {
         const res = await fetch('/api/generate-pt1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ upload: false })
+          body: JSON.stringify({ upload: isLiveUpload })
         });
         const data = await res.json();
-        if (data.success) {
-          showToast(`🎉 Part 1 Created: "${data.result.scriptData.title}"!`);
-          loadStatus();
+        if (data.success && data.result) {
+          const title = data.result.scriptData ? data.result.scriptData.title : 'Part 1';
+          showToast(`🎉 Part 1 Created: "${title}"!`);
+          if (data.result.videoResult && data.result.videoResult.videoPath) {
+            const fn = data.result.videoResult.videoPath.split('/').pop();
+            playVideo(fn, title);
+          }
+          await loadStatus();
         } else {
           showToast(`Error: ${data.error}`, true);
         }
@@ -865,17 +892,23 @@
     }
 
     async function triggerPart2() {
-      showToast('🍿 Groq is recalling cliffhanger and resolving PART 2 (The Finale)...');
+      const isLiveUpload = document.getElementById('liveUploadCheck') ? document.getElementById('liveUploadCheck').checked : true;
+      showToast(isLiveUpload ? '🍿 Groq is resolving cliffhanger & publishing PART 2...' : '🍿 Groq is crafting PART 2 finale preview...');
       try {
         const res = await fetch('/api/generate-pt2', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ upload: false })
+          body: JSON.stringify({ upload: isLiveUpload })
         });
         const data = await res.json();
-        if (data.success) {
-          showToast(`🎉 Part 2 Finale Created: "${data.result.scriptData.title}"!`);
-          loadStatus();
+        if (data.success && data.result) {
+          const title = data.result.scriptData ? data.result.scriptData.title : 'Part 2 Finale';
+          showToast(`🎉 Part 2 Finale Created: "${title}"!`);
+          if (data.result.videoResult && data.result.videoResult.videoPath) {
+            const fn = data.result.videoResult.videoPath.split('/').pop();
+            playVideo(fn, title);
+          }
+          await loadStatus();
         } else {
           showToast(`Error: ${data.error}`, true);
         }
@@ -889,9 +922,14 @@
       try {
         const res = await fetch('/api/post-now', { method: 'POST' });
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.result) {
           showToast(`🎉 Autonomous Cycle Completed!`);
-          loadStatus();
+          if (data.result.videoResult && data.result.videoResult.videoPath) {
+            const fn = data.result.videoResult.videoPath.split('/').pop();
+            const title = data.result.scriptData ? data.result.scriptData.title : 'Autonomous Reel';
+            playVideo(fn, title);
+          }
+          await loadStatus();
         } else {
           showToast(`Error: ${data.error}`, true);
         }
@@ -905,14 +943,35 @@
       try {
         const res = await fetch('/api/generate-only', { method: 'POST' });
         const data = await res.json();
-        if (data.success) {
-          showToast(`🎉 Video Ready!`);
-          loadStatus();
+        if (data.success && data.result) {
+          const title = data.result.scriptData ? data.result.scriptData.title : '16s Preview';
+          showToast(`🎉 16s Video Ready: "${title}"!`);
+          if (data.result.videoResult && data.result.videoResult.videoPath) {
+            const fn = data.result.videoResult.videoPath.split('/').pop();
+            playVideo(fn, title);
+          }
+          await loadStatus();
         } else {
           showToast(`Error: ${data.error}`, true);
         }
       } catch (err) {
         showToast(err.message, true);
+      }
+    }
+
+    async function syncBioLive() {
+      showToast('🎨 Syncing Bio & Profile Picture to @feticid...');
+      try {
+        const res = await fetch('/api/sync-profile', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('🎉 Bio & PFP successfully updated on Instagram Live!');
+          await loadStatus();
+        } else {
+          showToast('⚠️ Sync note: ' + data.error, true);
+        }
+      } catch (err) {
+        showToast('⚠️ Error: ' + err.message, true);
       }
     }
 
@@ -928,7 +987,7 @@
         const data = await res.json();
         if (data.success) {
           showToast('✅ Groq Settings Saved!');
-          loadStatus();
+          await loadStatus();
         }
       } catch (e) { showToast(e.message, true); }
     }
@@ -936,16 +995,17 @@
     async function saveIgConfig() {
       const username = document.getElementById('cfgIgUser').value;
       const password = document.getElementById('cfgIgPass').value;
+      const sessionId = document.getElementById('cfgIgSession').value;
       try {
         const res = await fetch('/api/save-ig', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, simulationMode: false })
+          body: JSON.stringify({ username, password, sessionId, simulationMode: false })
         });
         const data = await res.json();
         if (data.success) {
-          showToast('✅ Instagram Config Updated!');
-          loadStatus();
+          showToast('✅ Instagram Config & Session Saved!');
+          await loadStatus();
         }
       } catch (e) { showToast(e.message, true); }
     }
