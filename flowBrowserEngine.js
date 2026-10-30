@@ -1,7 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const config = require('./config');
 
 class FlowBrowserEngine {
@@ -46,40 +44,20 @@ class FlowBrowserEngine {
   }
 
   async launchBrowser() {
-    let executablePath;
-    try {
-      executablePath = await chromium.executablePath();
-    } catch (e) {
-      // Fallback paths on standard Linux/Termux if @sparticuz/chromium is unavailable
-      const possiblePaths = [
-        process.env.CHROME_PATH,
-        '/usr/bin/google-chrome',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium'
-      ].filter(Boolean);
-      executablePath = possiblePaths.find(p => fs.existsSync(p));
-    }
-
-    if (!executablePath) {
-      throw new Error('Chromium executable not found. Ensure @sparticuz/chromium or system chrome is available.');
-    }
-
-    console.log(`[FlowBrowserEngine] Launching Chromium from: ${executablePath}`);
-
+    const puppeteer = require('puppeteer');
+    console.log(`[FlowBrowserEngine] Launching Puppeteer bundled Chrome...`);
     const browser = await puppeteer.launch({
-      executablePath,
+      headless: true,
       args: [
-        ...chromium.args,
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--single-process',
         '--no-zygote',
+        '--single-process',
         '--window-size=1280,800'
       ],
-      defaultViewport: { width: 1280, height: 800 },
-      headless: chromium.headless || true
+      defaultViewport: { width: 1280, height: 800 }
     });
 
     return browser;
