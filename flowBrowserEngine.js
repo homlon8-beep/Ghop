@@ -386,15 +386,15 @@ class FlowBrowserEngine {
       const finalOutputPath = path.join(this.outputDir, `veo_reel_master_${Date.now()}.mp4`);
 
       if (shot2Path && fs.existsSync(shot2Path)) {
-        console.log(`[FlowBrowserEngine] 🎬 Concatenating Shot 1 + Shot 2 into true 16-second narrative film (NO LOOPING, Lossless Copy)...`);
+        console.log(`[FlowBrowserEngine] 🎬 Mastering Shot 1 + Shot 2 into true 16-second CFR 30fps Reel (NO GLITCHING, Pristine Quality)...`);
         const listPath = path.join(this.outputDir, `concat_${Date.now()}.txt`);
         fs.writeFileSync(listPath, `file '${shot1Path}'\nfile '${shot2Path}'\n`);
-        const concatCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy -movflags +faststart "${finalOutputPath}"`;
+        const concatCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" -vf "fps=30" -c:v libx264 -preset veryfast -crf 19 -profile:v high -level 4.1 -pix_fmt yuv420p -g 60 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 128k -ar 44100 -ac 2 -movflags +faststart "${finalOutputPath}"`;
         execSync(concatCmd);
         try { fs.unlinkSync(listPath); } catch (e) {}
       } else {
-        console.log(`[FlowBrowserEngine] 🎬 Finalizing single shot Reel...`);
-        const singleCmd = `ffmpeg -y -i "${shot1Path}" -c copy -movflags +faststart "${finalOutputPath}"`;
+        console.log(`[FlowBrowserEngine] 🎬 Mastering single shot into CFR 30fps Reel...`);
+        const singleCmd = `ffmpeg -y -i "${shot1Path}" -vf "fps=30" -c:v libx264 -preset veryfast -crf 19 -profile:v high -level 4.1 -pix_fmt yuv420p -g 60 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 128k -ar 44100 -ac 2 -movflags +faststart "${finalOutputPath}"`;
         execSync(singleCmd);
       }
 

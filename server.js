@@ -333,6 +333,103 @@ app.get('/api/latest-video', (req, res) => {
   res.status(404).send('No video generated yet');
 });
 
+// Clean / Delete all Reels on @feticid
+app.all('/api/clean-instagram', async (req, res) => {
+  try {
+    console.log('[InstagramCleaner] Starting profile wipe for @feticid...');
+    const flowBrowserEngine = require('./flowBrowserEngine');
+    const session = JSON.parse(fs.readFileSync(path.join(__dirname, 'ig_session.json'), 'utf8'));
+    const browser = await flowBrowserEngine.launchBrowser();
+    const page = await browser.newPage();
+    
+    const cookies = [];
+    for (const [k, v] of Object.entries(session.cookieMap || {})) {
+      cookies.push({
+        name: k,
+        value: v,
+        domain: '.instagram.com',
+        path: '/',
+        secure: true
+      });
+    }
+    await page.setCookie(...cookies);
+
+    console.log('[InstagramCleaner] Navigating to https://www.instagram.com/feticid/reels/...');
+    await page.goto('https://www.instagram.com/feticid/reels/', { waitUntil: 'networkidle2', timeout: 30000 });
+    
+    let deletedCount = 0;
+    const deletedCodes = [];
+
+    const postHrefs = await page.evaluate(() => {
+      const links = [...document.querySelectorAll('a[href*="/reel/"], a[href*="/p/"]')];
+      return [...new Set(links.map(a => a.href))];
+    });
+
+    console.log(`[InstagramCleaner] Found ${postHrefs.length} posts on profile:`, postHrefs);
+
+    for (const href of postHrefs) {
+      const codeMatch = href.match(/\/(reel|p)\/([A-Za-z0-9_-]+)/);
+      if (!codeMatch) continue;
+      const code = codeMatch[2];
+      console.log(`[InstagramCleaner] Deleting post ${code}...`);
+      
+      await page.goto(href, { waitUntil: 'networkidle2', timeout: 20000 });
+      await new Promise(r => setTimeout(r, 1200));
+
+      const clickedMore = await page.evaluate(() => {
+        const btns = [...document.querySelectorAll('svg[aria-label="More options"], svg[aria-label="Options"]')];
+        if (btns.length > 0) {
+          const btn = btns[0].closest('button, [role="button"]') || btns[0];
+          btn.click();
+          return true;
+        }
+        return false;
+      });
+
+      if (clickedMore) {
+        await new Promise(r => setTimeout(r, 800));
+        const clickedDelete = await page.evaluate(() => {
+          const btns = [...document.querySelectorAll('button, [role="button"]')];
+          const delBtn = btns.find(b => /delete/i.test(b.textContent || ''));
+          if (delBtn) {
+            delBtn.click();
+            return true;
+          }
+          return false;
+        });
+
+        if (clickedDelete) {
+          await new Promise(r => setTimeout(r, 800));
+          await page.evaluate(() => {
+            const btns = [...document.querySelectorAll('button, [role="button"]')];
+            const confirmBtn = btns.find(b => /delete/i.test(b.textContent || ''));
+            if (confirmBtn) confirmBtn.click();
+          });
+          deletedCount++;
+          deletedCodes.push(code);
+          console.log(`[InstagramCleaner] ✅ Deleted ${code}`);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    const cleanShotPath = path.join(config.OUTPUT_DIR, 'profile_cleaned.png');
+    await page.goto('https://www.instagram.com/feticid/', { waitUntil: 'networkidle2', timeout: 20000 });
+    await page.screenshot({ path: cleanShotPath });
+    await browser.close();
+
+    res.json({
+      success: true,
+      message: `Profile clean complete. Deleted ${deletedCount} posts.`,
+      deletedCount,
+      deletedCodes
+    });
+  } catch (err) {
+    console.error('[InstagramCleaner] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Test Flow Browser Engine Directly (Synchronous with long timeout)
 app.get('/api/test-flow-direct', async (req, res) => {
   const logs = [];
