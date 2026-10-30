@@ -1,0 +1,18 @@
+{
+  "authenticated": true,
+  "username": "feticid",
+  "userId": "46856995521",
+  "sessionId": "46856995521%3A9VAnUHjZeJi7Xw%3A13%3AAYkvnccZlGiibmGIxYdgadwx4RQXR2Yi3VAI_gV5nA",
+  "cookieMap": {
+    "csrftoken": "wF5VAsD7Yp8gKeg8EOirKxMAT2lpRBJX",
+    "mid": "auRRGQALAAEQh-38urOcfuiTfdcJ",
+    "ig_did": "2FED37F4-664E-465A-AD58-4F5E0E470C52",
+    "ig_nrcb": "1",
+    "rur": "\"KND\\05446856995521\\0541824883871:01ff0771ed8043a95d8b0671fdf0162a10e7dc8d7c1fcf1370a4b43f868c3955dc5a3b8c\"",
+    "ds_user_id": "46856995521",
+    "th_eu_pref": "deleted",
+    "sessionid": "46856995521%3A9VAnUHjZeJi7Xw%3A13%3AAYkvnccZlGiibmGIxYdgadwx4RQXR2Yi3VAI_gV5nA"
+  },
+  "fullCookieString": "csrftoken=wF5VAsD7Yp8gKeg8EOirKxMAT2lpRBJX; mid=auRRGQALAAEQh-38urOcfuiTfdcJ; ig_did=2FED37F4-664E-465A-AD58-4F5E0E470C52; ig_nrcb=1; rur=\"KND\\05446856995521\\0541824883871:01ff0771ed8043a95d8b0671fdf0162a10e7dc8d7c1fcf1370a4b43f868c3955dc5a3b8c\"; ds_user_id=46856995521; th_eu_pref=deleted; sessionid=46856995521%3A9VAnUHjZeJi7Xw%3A13%3AAYkvnccZlGiibmGIxYdgadwx4RQXR2Yi3VAI_gV5nA",
+  "updatedAt": "2026-10-30T08:11:12.488Z"
+}

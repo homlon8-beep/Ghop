@@ -338,12 +338,33 @@ app.all('/api/clean-instagram', async (req, res) => {
   try {
     console.log('[InstagramCleaner] Starting profile wipe for @feticid...');
     const flowBrowserEngine = require('./flowBrowserEngine');
-    const session = JSON.parse(fs.readFileSync(path.join(__dirname, 'ig_session.json'), 'utf8'));
+    
+    let cookieMap = {};
+    const sessionPath = path.join(__dirname, 'ig_session.json');
+    if (fs.existsSync(sessionPath)) {
+      try {
+        const session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+        cookieMap = session.cookieMap || {};
+      } catch (e) {}
+    }
+    
+    if (Object.keys(cookieMap).length === 0 && process.env.IG_COOKIE_STRING) {
+      process.env.IG_COOKIE_STRING.split(';').forEach(p => {
+        const [k, ...v] = p.trim().split('=');
+        if (k && v.length) cookieMap[k] = v.join('=');
+      });
+    }
+
+    if (Object.keys(cookieMap).length === 0 && process.env.IG_SESSION_ID) {
+      cookieMap.sessionid = process.env.IG_SESSION_ID;
+      cookieMap.ds_user_id = process.env.IG_USER_ID || '46856995521';
+    }
+
     const browser = await flowBrowserEngine.launchBrowser();
     const page = await browser.newPage();
     
     const cookies = [];
-    for (const [k, v] of Object.entries(session.cookieMap || {})) {
+    for (const [k, v] of Object.entries(cookieMap)) {
       cookies.push({
         name: k,
         value: v,
