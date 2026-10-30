@@ -278,7 +278,18 @@ class InstagramUploader {
     return { success: true, ...results };
   }
 
-  async publishViaWebAPI({ videoPath, coverPath, caption }) {
+  async publishViaWebAPI(opts, maybeCaption) {
+    let videoPath, coverPath, caption;
+    if (typeof opts === 'string') {
+      videoPath = opts;
+      caption = maybeCaption || '';
+      coverPath = videoPath.replace(/\.mp4$/i, '_cover.jpg');
+    } else {
+      videoPath = opts.videoPath;
+      coverPath = opts.coverPath || videoPath.replace(/\.mp4$/i, '_cover.jpg');
+      caption = opts.caption || '';
+    }
+
     let session = null;
     const sessionPath = path.join(__dirname, 'ig_session.json');
     if (fs.existsSync(sessionPath)) {
@@ -288,7 +299,7 @@ class InstagramUploader {
     }
 
     const cookieStr = session?.fullCookieString || process.env.IG_COOKIE_STRING || (process.env.IG_SESSION_ID ? `sessionid=${process.env.IG_SESSION_ID}; ds_user_id=${process.env.IG_USER_ID || '46856995521'}` : null);
-    const csrf = session?.cookieMap?.csrftoken || 'GSVm3Ex8xi2QYCITtB4hFDtBXHtDYVdf';
+    const csrf = session?.cookieMap?.csrftoken || process.env.IG_CSRF_TOKEN || 'GSVm3Ex8xi2QYCITtB4hFDtBXHtDYVdf';
 
     if (!cookieStr) {
       throw new Error('No valid Instagram web session cookie found');
@@ -296,7 +307,21 @@ class InstagramUploader {
 
     const uploadId = Date.now().toString();
     const videoBuffer = fs.readFileSync(videoPath);
-    const coverBuffer = fs.readFileSync(coverPath);
+    
+    // Ensure cover frame exists or extract from video
+    let coverBuffer;
+    if (fs.existsSync(coverPath)) {
+      coverBuffer = fs.readFileSync(coverPath);
+    } else {
+      try {
+        const { execSync } = require('child_process');
+        execSync(`ffmpeg -y -i "${videoPath}" -ss 00:00:01.000 -vframes 1 "${coverPath}"`, { stdio: 'ignore' });
+        coverBuffer = fs.readFileSync(coverPath);
+      } catch (e) {
+        // Fallback: minimal valid JPEG buffer
+        coverBuffer = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64');
+      }
+    }
 
     console.log(`[InstagramUploader] 🚀 Publishing Reel via verified Web API to @feticid (Upload ID: ${uploadId})...`);
 

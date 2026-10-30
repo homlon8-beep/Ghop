@@ -114,7 +114,11 @@ class FlowBrowserEngine {
     page.on('response', async res => {
       const u = res.url();
       const ct = res.headers()['content-type'] || '';
-      if (ct.includes('video/') || u.includes('.mp4') || (u.includes('flow-content.google') && (u.includes('video') || u.includes('mp4')))) {
+      if (
+        (ct.includes('video/') || u.includes('.mp4')) &&
+        !u.includes('banner') &&
+        !u.includes('gstatic.com')
+      ) {
         console.log(`[Flow Captured Video URL] ${u.slice(0, 120)}`);
         capturedVideoUrl = u;
       }
@@ -285,9 +289,9 @@ class FlowBrowserEngine {
           console.log(`[FlowBrowserEngine] Canvas status: "${progressInfo}"`);
         }
 
-        // Check if captured directly via network response
-        if (capturedVideoUrl) {
-          console.log(`[FlowBrowserEngine] Detected video stream URL from network: ${capturedVideoUrl.slice(0, 80)}`);
+        // Check if captured directly via network response (ignoring homepage banners)
+        if (capturedVideoUrl && !capturedVideoUrl.includes('gstatic.com') && !capturedVideoUrl.includes('banner')) {
+          console.log(`[FlowBrowserEngine] Detected authentic video stream URL: ${capturedVideoUrl.slice(0, 80)}`);
           videoInfo = { type: 'url', url: capturedVideoUrl };
           break;
         }
@@ -318,9 +322,16 @@ class FlowBrowserEngine {
           }
 
           // 2. Check for download buttons or menu links
-          const links = [...document.querySelectorAll('a[download], a[href*="media"], a[href*="video"]')];
+          const links = [...document.querySelectorAll('a[download], a[href*="media"], a[href*="video"], a[href*="flow-content"]')];
           for (const l of links) {
-            if (l.href) return { type: 'url', url: l.href };
+            if (l.href && !l.href.includes('gstatic.com') && !l.href.includes('banner')) return { type: 'url', url: l.href };
+          }
+
+          // 3. Check for elements with download or media attributes
+          const dlElements = [...document.querySelectorAll('[data-download-url], [data-video-url], [data-url]')];
+          for (const el of dlElements) {
+            const u = el.getAttribute('data-download-url') || el.getAttribute('data-video-url') || el.getAttribute('data-url');
+            if (u && !u.includes('gstatic.com') && !u.includes('banner')) return { type: 'url', url: u };
           }
 
           return null;
@@ -357,18 +368,39 @@ class FlowBrowserEngine {
       const filename = `veo_reel_${Date.now()}.mp4`;
       const outputPath = path.join(this.outputDir, filename);
 
-      const base64Data = await page.evaluate(async (url) => {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      }, videoInfo.url);
+      if (videoInfo.type === 'blob' || videoInfo.url.startsWith('blob:')) {
+        const base64Data = await page.evaluate(async (url) => {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }, videoInfo.url);
 
-      const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
-      fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
+        const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
+        fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
+      } else {
+        try {
+          const res = await fetch(videoInfo.url);
+          const arrayBuf = await res.arrayBuffer();
+          fs.writeFileSync(outputPath, Buffer.from(arrayBuf));
+        } catch (fetchErr) {
+          // Fallback to in-page evaluate download
+          const base64Data = await page.evaluate(async (url) => {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          }, videoInfo.url);
+          const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
+          fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
+        }
+      }
 
       console.log(`[FlowBrowserEngine] Successfully downloaded Veo 3.1 video to: ${outputPath} (${fs.statSync(outputPath).size} bytes)`);
 
