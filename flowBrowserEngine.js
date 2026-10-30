@@ -72,9 +72,11 @@ class FlowBrowserEngine {
     const browser = await this.launchBrowser();
     const page = await browser.newPage();
 
+    // Capture screenshot on error for debugging
+    const screenshotPath = path.join(this.outputDir, 'flow_debug_screenshot.png');
+
     try {
       console.log(`[FlowBrowserEngine] Setting ${cookiesList.length} authenticated Google cookies...`);
-      // Format cookies for Puppeteer
       const puppeteerCookies = cookiesList.map(c => ({
         name: c.name,
         value: c.value,
@@ -93,47 +95,67 @@ class FlowBrowserEngine {
         timeout: 45000
       });
 
-      // Verify authenticated session
       const pageTitle = await page.title();
       console.log(`[FlowBrowserEngine] Page loaded: "${pageTitle}" (${page.url()})`);
 
-      // Check if redirected to login
       if (page.url().includes('accounts.google.com/ServiceLogin')) {
+        await page.screenshot({ path: screenshotPath });
         throw new Error('Google session expired or rejected. Sign-in required.');
       }
 
-      // Check for prompt box
-      console.log(`[FlowBrowserEngine] Locating prompt editor...`);
-      await page.waitForSelector('[role="textbox"][contenteditable="true"]', { timeout: 25000 });
+      // 1. Check if on Dashboard and click "New project"
+      const hasPromptBox = await page.$('[role="textbox"][contenteditable="true"]');
+      if (!hasPromptBox) {
+        console.log(`[FlowBrowserEngine] Inside dashboard. Clicking "New project" button...`);
+        const clickedNewProject = await page.evaluate(() => {
+          const btns = [...document.querySelectorAll('button, [role="button"]')];
+          const newProjectBtn = btns.find(b => /new project/i.test(b.textContent || ''));
+          if (newProjectBtn) {
+            newProjectBtn.click();
+            return true;
+          }
+          return false;
+        });
 
-      // Click settings to select Video mode and Veo 3.1
-      console.log(`[FlowBrowserEngine] Configuring generation settings (Video Mode, Veo 3.1, 9:16)...`);
-      const settingsBtn = await page.$('button:has-text("crop_")');
-      if (settingsBtn) {
-        await settingsBtn.click();
-        await page.waitForTimeout(600);
-
-        // Select Video Mode
-        const videoModeBtn = await page.$('button:has-text("Video"), [role="button"]:has-text("Video")');
-        if (videoModeBtn) {
-          await videoModeBtn.click();
-          await page.waitForTimeout(400);
+        if (clickedNewProject) {
+          console.log(`[FlowBrowserEngine] Clicked "New project". Waiting for editor to mount...`);
+          await new Promise(r => setTimeout(r, 4000));
         }
-
-        // Select 9:16 vertical ratio
-        const ratioBtn = await page.$('button:has-text("9:16"), [role="button"]:has-text("9:16")');
-        if (ratioBtn) {
-          await ratioBtn.click();
-          await page.waitForTimeout(300);
-        }
-
-        // Close popover
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
       }
 
-      // Focus prompt box and type prompt
-      console.log(`[FlowBrowserEngine] Typing surreal prompt into Flow Veo 3.1...`);
+      // 2. Wait for prompt editor
+      console.log(`[FlowBrowserEngine] Waiting for prompt editor to mount...`);
+      await page.waitForSelector('[role="textbox"][contenteditable="true"]', { timeout: 30000 });
+
+      // 3. Select Video mode & 9:16 ratio via DOM evaluation
+      console.log(`[FlowBrowserEngine] Setting Video mode & 9:16 vertical ratio...`);
+      await page.evaluate(() => {
+        const btns = [...document.querySelectorAll('button, [role="button"]')];
+        const settingsBtn = btns.find(b => /crop_|video|image/i.test(b.textContent || ''));
+        if (settingsBtn) settingsBtn.click();
+      });
+
+      await new Promise(r => setTimeout(r, 600));
+
+      await page.evaluate(() => {
+        const btns = [...document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"]')];
+        const videoBtn = btns.find(b => /video/i.test(b.textContent || '') && !/image/i.test(b.textContent || ''));
+        if (videoBtn) videoBtn.click();
+      });
+
+      await new Promise(r => setTimeout(r, 400));
+
+      await page.evaluate(() => {
+        const btns = [...document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"]')];
+        const ratioBtn = btns.find(b => /9:16/i.test(b.textContent || ''));
+        if (ratioBtn) ratioBtn.click();
+      });
+
+      await page.keyboard.press('Escape');
+      await new Promise(r => setTimeout(r, 400));
+
+      // 4. Type prompt into contenteditable div
+      console.log(`[FlowBrowserEngine] Entering prompt into Veo 3.1...`);
       const promptBox = await page.$('[role="textbox"][contenteditable="true"]');
       await promptBox.click();
       await page.keyboard.down('Control');
@@ -141,57 +163,84 @@ class FlowBrowserEngine {
       await page.keyboard.up('Control');
       await page.keyboard.press('Backspace');
 
-      await page.type('[role="textbox"][contenteditable="true"]', prompt, { delay: 15 });
-      await page.waitForTimeout(500);
+      await page.type('[role="textbox"][contenteditable="true"]', prompt, { delay: 10 });
+      await new Promise(r => setTimeout(r, 500));
 
-      // Click Create button
-      console.log(`[FlowBrowserEngine] Submitting generation to Google Veo 3.1...`);
-      const createBtn = await page.$('button:has-text("Create")');
-      if (!createBtn) {
-        throw new Error('Could not find Create button on Flow page');
+      // 5. Submit generation (Click Create)
+      console.log(`[FlowBrowserEngine] Clicking "Create" button...`);
+      const submitted = await page.evaluate(() => {
+        const btns = [...document.querySelectorAll('button, [role="button"]')];
+        const createBtn = btns.find(b => /create/i.test(b.textContent || '') && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
+        if (createBtn) {
+          createBtn.click();
+          return true;
+        }
+        return false;
+      });
+
+      if (!submitted) {
+        await page.screenshot({ path: screenshotPath });
+        throw new Error('Create button not clickable or prompt was rejected by Flow.');
       }
-      await createBtn.click();
 
-      // Listen for video generation result
-      console.log(`[FlowBrowserEngine] Generation queued. Waiting for Veo 3.1 video result (up to 180s)...`);
+      // 6. Monitor generation output (poll for video src or download link)
+      console.log(`[FlowBrowserEngine] Video generation submitted to Veo 3.1! Polling output (up to 180s)...`);
 
       let videoUrl = null;
       const startTime = Date.now();
       const maxWaitMs = 180000;
 
       while (Date.now() - startTime < maxWaitMs) {
-        const videoSrc = await page.evaluate(() => {
+        const found = await page.evaluate(() => {
+          // Check for video tag
           const vids = [...document.querySelectorAll('video')];
-          const active = vids.find(v => (v.src && !v.src.includes('blob:')) || (v.currentSrc && !v.currentSrc.includes('blob:')));
-          if (active) return active.src || active.currentSrc;
+          for (const v of vids) {
+            const src = v.currentSrc || v.src;
+            if (src && !src.startsWith('blob:')) return src;
+          }
 
-          // Check if download link or media redirect is available
-          const links = [...document.querySelectorAll('a[download], button:has-text("Download")')];
-          const dl = links.find(l => l.href && l.href.includes('media'));
-          if (dl) return dl.href;
+          // Check for download button or media link
+          const links = [...document.querySelectorAll('a[download], a[href*="media"], button')];
+          const dl = links.find(l => (l.href && l.href.includes('media')) || /download/i.test(l.textContent || ''));
+          if (dl && dl.href) return dl.href;
 
           return null;
         });
 
-        if (videoSrc) {
-          videoUrl = videoSrc;
+        if (found) {
+          videoUrl = found;
           break;
         }
 
-        await page.waitForTimeout(3000);
+        // Check for error markers
+        const errorText = await page.evaluate(() => {
+          const body = document.body.textContent || '';
+          if (/unusual activity|rate limit/i.test(body)) return 'Rate limited by Google Flow';
+          if (/insufficient credits|no credits/i.test(body)) return 'Out of Google Flow credits';
+          if (/violates|content policy/i.test(body)) return 'Prompt blocked by Google content policy';
+          return null;
+        });
+
+        if (errorText) {
+          await page.screenshot({ path: screenshotPath });
+          throw new Error(`Google Flow reported: ${errorText}`);
+        }
+
+        await new Promise(r => setTimeout(r, 3000));
       }
 
       if (!videoUrl) {
-        throw new Error('Timed out waiting for Flow Veo 3.1 generation output');
+        await page.screenshot({ path: screenshotPath });
+        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (180s). Screenshot captured.');
       }
 
       console.log(`[FlowBrowserEngine] ✅ Veo 3.1 Video generated: ${videoUrl}`);
 
-      // Download the video
       const filename = `veo_reel_${Date.now()}.mp4`;
       const outputPath = path.join(this.outputDir, filename);
 
-      const downloadRes = await page.evaluate(async (url) => {
+      // Download the video stream inside browser session
+      const base64Data = await page.evaluate(async (url) => {
         const res = await fetch(url);
         const blob = await res.blob();
         return new Promise((resolve) => {
@@ -201,10 +250,10 @@ class FlowBrowserEngine {
         });
       }, videoUrl);
 
-      const base64Data = downloadRes.replace(/^data:video\/\w+;base64,/, '');
-      fs.writeFileSync(outputPath, Buffer.from(base64Data, 'base64'));
+      const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
+      fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
 
-      console.log(`[FlowBrowserEngine] Successfully downloaded Veo 3.1 video to: ${outputPath}`);
+      console.log(`[FlowBrowserEngine] Successfully downloaded Veo 3.1 video to: ${outputPath} (${fs.statSync(outputPath).size} bytes)`);
 
       return {
         success: true,
@@ -213,6 +262,11 @@ class FlowBrowserEngine {
         durationSec: 8.0,
         prompt
       };
+    } catch (err) {
+      try {
+        await page.screenshot({ path: screenshotPath });
+      } catch (e) {}
+      throw err;
     } finally {
       await browser.close();
     }

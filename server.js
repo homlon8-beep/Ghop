@@ -191,6 +191,31 @@ app.post('/api/generate-only', async (req, res) => {
   }
 });
 
+// Test Flow Browser Engine Directly
+app.get('/api/test-flow-direct', async (req, res) => {
+  const logs = [];
+  function log(...args) {
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+    console.log(msg);
+    logs.push(msg);
+  }
+
+  try {
+    log('🚀 [Test Flow Direct] Starting direct Google Flow Veo 3.1 generation test...');
+    const flowBrowserEngine = require('./flowBrowserEngine');
+    const prompt = req.query.prompt || 'a glowing neon rubber ball bouncing off city rooftops with colorful sparkles, 3d cartoon physics, 9:16 vertical video';
+    
+    log('Prompt:', prompt);
+    const result = await flowBrowserEngine.generateVeoVideo(prompt);
+    log('Generation succeeded!', result);
+
+    res.json({ success: true, logs, result });
+  } catch (err) {
+    log('❌ Generation error:', err.message);
+    res.status(500).json({ success: false, logs, error: err.message, stack: err.stack });
+  }
+});
+
 // Save / Update Google Labs Flow Accounts
 app.post('/api/save-flow-accounts', (req, res) => {
   try {

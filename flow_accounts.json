@@ -1,5 +1,5 @@
 {
-  "activeAccountIndex": 2,
+  "activeAccountIndex": 1,
   "rotationStrategy": "round-robin",
   "accounts": [
     {
