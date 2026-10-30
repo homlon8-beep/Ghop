@@ -278,6 +278,140 @@ class InstagramUploader {
     return { success: true, ...results };
   }
 
+  async publishViaWebAPI({ videoPath, coverPath, caption }) {
+    let session = null;
+    const sessionPath = path.join(__dirname, 'ig_session.json');
+    if (fs.existsSync(sessionPath)) {
+      try {
+        session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+      } catch (e) {}
+    }
+
+    const cookieStr = session?.fullCookieString || process.env.IG_COOKIE_STRING || (process.env.IG_SESSION_ID ? `sessionid=${process.env.IG_SESSION_ID}; ds_user_id=${process.env.IG_USER_ID || '46856995521'}` : null);
+    const csrf = session?.cookieMap?.csrftoken || 'GSVm3Ex8xi2QYCITtB4hFDtBXHtDYVdf';
+
+    if (!cookieStr) {
+      throw new Error('No valid Instagram web session cookie found');
+    }
+
+    const uploadId = Date.now().toString();
+    const videoBuffer = fs.readFileSync(videoPath);
+    const coverBuffer = fs.readFileSync(coverPath);
+
+    console.log(`[InstagramUploader] 🚀 Publishing Reel via verified Web API to @feticid (Upload ID: ${uploadId})...`);
+
+    // 1. Upload Video
+    const videoParams = JSON.stringify({
+      upload_media_height: 1920,
+      upload_media_width: 1080,
+      upload_media_duration_ms: 16000,
+      upload_id: uploadId,
+      media_type: 2,
+      for_album: false
+    });
+
+    const vRes = await fetch(`https://www.instagram.com/rupload_igvideo/${uploadId}`, {
+      method: 'POST',
+      headers: {
+        'cookie': cookieStr,
+        'x-csrftoken': csrf,
+        'x-ig-app-id': '936619743392459',
+        'x-asbd-id': '129477',
+        'x-instagram-rupload-params': videoParams,
+        'x-entity-name': uploadId,
+        'x-entity-length': videoBuffer.length.toString(),
+        'offset': '0',
+        'content-type': 'video/mp4',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'referer': 'https://www.instagram.com/'
+      },
+      body: videoBuffer
+    });
+    const vData = await vRes.json();
+    console.log(`[InstagramUploader] Video upload status: ${vRes.status}`, vData);
+
+    // 2. Upload Cover
+    const coverParams = JSON.stringify({
+      upload_id: uploadId,
+      media_type: 1
+    });
+
+    const cRes = await fetch(`https://www.instagram.com/rupload_igphoto/${uploadId}`, {
+      method: 'POST',
+      headers: {
+        'cookie': cookieStr,
+        'x-csrftoken': csrf,
+        'x-ig-app-id': '936619743392459',
+        'x-asbd-id': '129477',
+        'x-instagram-rupload-params': coverParams,
+        'x-entity-name': uploadId,
+        'x-entity-length': coverBuffer.length.toString(),
+        'offset': '0',
+        'content-type': 'image/jpeg',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'referer': 'https://www.instagram.com/'
+      },
+      body: coverBuffer
+    });
+    const cData = await cRes.json();
+    console.log(`[InstagramUploader] Cover upload status: ${cRes.status}`, cData);
+
+    // 3. Configure to Clips with polling
+    const finalCaption = caption || '🌀 The Surreal Multiverse #MorphVerseAI';
+    const configBody = new URLSearchParams({
+      upload_id: uploadId,
+      caption: finalCaption,
+      source_type: '4',
+      clips_share_preview_to_feed: '1',
+      disable_comments: '0',
+      like_and_view_counts_disabled: '0'
+    }).toString();
+
+    let publishedMedia = null;
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      console.log(`[InstagramUploader] Polling configure_to_clips (attempt ${attempt}/10)...`);
+      await new Promise(r => setTimeout(r, 3500));
+
+      const confRes = await fetch('https://www.instagram.com/api/v1/media/configure_to_clips/', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'cookie': cookieStr,
+          'x-csrftoken': csrf,
+          'x-ig-app-id': '936619743392459',
+          'x-asbd-id': '129477',
+          'x-requested-with': 'XMLHttpRequest',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'referer': 'https://www.instagram.com/'
+        },
+        body: configBody
+      });
+
+      const confData = await confRes.json();
+      if (confRes.status === 200 && confData.status === 'ok' && confData.media) {
+        publishedMedia = confData.media;
+        break;
+      }
+      if (confData.message && confData.message.includes('Transcode not finished')) {
+        continue;
+      }
+    }
+
+    if (!publishedMedia) {
+      throw new Error('Configure to clips timed out or failed to publish.');
+    }
+
+    const reelUrl = `https://www.instagram.com/reel/${publishedMedia.code}/`;
+    console.log(`[InstagramUploader] 🎉 LIVE REEL PUBLISHED: ${reelUrl}`);
+
+    return {
+      success: true,
+      mediaId: publishedMedia.id,
+      code: publishedMedia.code,
+      reelUrl
+    };
+  }
+
   async publishReel({ videoPath, coverPath, caption, scriptData }) {
     console.log(`[InstagramUploader] Preparing video for Instagram Reels publishing...`);
     
@@ -287,6 +421,39 @@ class InstagramUploader {
     // 2. Validate cover image
     if (!fs.existsSync(coverPath)) {
       throw new Error(`Cover image not found at ${coverPath}`);
+    }
+
+    // Try verified Web API publisher first (avoids deprecated mobile private API block)
+    try {
+      const webResult = await this.publishViaWebAPI({ videoPath, coverPath, caption });
+      if (webResult && webResult.success) {
+        const historyEntry = {
+          id: `reel_${Date.now()}`,
+          status: 'published',
+          mediaId: webResult.mediaId,
+          code: webResult.code,
+          reelUrl: webResult.reelUrl,
+          videoPath,
+          coverPath,
+          caption,
+          niche: scriptData?.niche,
+          angle: scriptData?.angle,
+          specs,
+          timestamp: new Date().toISOString()
+        };
+        this.recordHistory(historyEntry);
+
+        return {
+          success: true,
+          status: 'published',
+          mediaId: webResult.mediaId,
+          code: webResult.code,
+          reelUrl: webResult.reelUrl,
+          historyEntry
+        };
+      }
+    } catch (webErr) {
+      console.warn(`[InstagramUploader] Web API upload notice: ${webErr.message}. Attempting private API fallback...`);
     }
 
     const videoBuffer = fs.readFileSync(videoPath);

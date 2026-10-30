@@ -447,7 +447,30 @@ class FlowClient {
         console.warn(`[FlowClient] Flow API generation encountered an issue (${err.message}). Engaging autonomous kinetic synthesis engine.`);
       }
     } else {
-      console.log(`[FlowClient] No live authenticated Flow accounts in pool (or tokens expired/refreshing). Engaging autonomous kinetic synthesis engine.`);
+      console.log(`[FlowClient] No live authenticated Flow accounts in direct API pool. Engaging Google Flow Veo 3.1 Browser Engine...`);
+    }
+
+    // Try Google Flow Veo 3.1 Browser Engine with user's authenticated session
+    try {
+      const flowBrowserEngine = require('./flowBrowserEngine');
+      const browserPrompt = scriptData.flowPrompts?.basePrompt || scriptData.visualScenes?.[0]?.prompt || scriptData.caption;
+      console.log(`[FlowClient] Attempting genuine Google Flow Veo 3.1 generation via Browser Engine with @homlon8 session...`);
+      const veoResult = await flowBrowserEngine.generateVeoVideo(browserPrompt);
+      if (veoResult && veoResult.videoPath && fs.existsSync(veoResult.videoPath)) {
+        const coverPath = veoResult.videoPath.replace('.mp4', '_cover.jpg');
+        await videoSynthesizer.extractCoverFrame(veoResult.videoPath, coverPath, 1.5);
+        return {
+          success: true,
+          source: 'google-flow-veo-3.1',
+          videoPath: veoResult.videoPath,
+          coverPath,
+          durationSec: 16.0,
+          resolution: '1080x1920 (9:16 vertical)',
+          createdAt: new Date().toISOString()
+        };
+      }
+    } catch (browserErr) {
+      console.warn(`[FlowClient] Flow browser engine notice: ${browserErr.message}. Engaging autonomous kinetic synthesis engine.`);
     }
 
     // High-Aesthetic Local Synthesis Fallback
