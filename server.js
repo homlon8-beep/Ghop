@@ -209,7 +209,17 @@ app.get('/api/test-flow-direct', async (req, res) => {
     const result = await flowBrowserEngine.generateVeoVideo(prompt);
     log('Generation succeeded!', result);
 
-    res.json({ success: true, logs, result });
+    let igResult = null;
+    const shouldUpload = req.query.upload !== 'false';
+    if (shouldUpload && result.videoPath && fs.existsSync(result.videoPath)) {
+      log('📤 Auto-publishing authentic Veo 3.1 Reel to Instagram @feticid...');
+      const instagramUploader = require('./instagramUploader');
+      const caption = `When the neon orb breaches city airspace... ✨🏙️ #MorphVerse #Veo3 #AIAnimation #SurrealCinema #GhopGhop`;
+      igResult = await instagramUploader.publishViaWebAPI(result.videoPath, caption);
+      log('Instagram publish result:', igResult);
+    }
+
+    res.json({ success: true, logs, result, igResult });
   } catch (err) {
     log('❌ Generation error:', err.message);
     res.status(500).json({ success: false, logs, error: err.message, stack: err.stack });

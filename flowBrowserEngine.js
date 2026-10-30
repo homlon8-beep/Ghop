@@ -211,53 +211,88 @@ class FlowBrowserEngine {
       await page.type('[role="textbox"][contenteditable="true"]', prompt, { delay: 10 });
       await new Promise(r => setTimeout(r, 500));
 
-      // 5. Submit generation (Click Create)
-      console.log(`[FlowBrowserEngine] Clicking "Create" button...`);
+      // 5. Submit generation (Press Enter & Click Arrow Button)
+      console.log(`[FlowBrowserEngine] Submitting generation to Veo 3.1...`);
+      await page.keyboard.press('Enter');
+      await new Promise(r => setTimeout(r, 800));
+
       const submitted = await page.evaluate(() => {
         const btns = [...document.querySelectorAll('button, [role="button"]')];
-        const createBtn = btns.find(b => /create/i.test(b.textContent || '') && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
-        if (createBtn) {
-          createBtn.click();
-          return true;
+
+        for (const b of btns) {
+          const text = (b.textContent || '').trim().toLowerCase();
+          const label = (b.getAttribute('aria-label') || '').toLowerCase();
+          const html = b.innerHTML.toLowerCase();
+
+          if (label.includes('send') || label.includes('generate') || label.includes('submit') || label.includes('create')) {
+            b.click();
+            return true;
+          }
+          if (html.includes('arrow_forward') || html.includes('send') || html.includes('arrow_right')) {
+            b.click();
+            return true;
+          }
         }
+
+        const promptBox = document.querySelector('[role="textbox"][contenteditable="true"]');
+        if (promptBox) {
+          let container = promptBox.parentElement;
+          for (let i = 0; i < 4 && container; i++) {
+            const cBtns = [...container.querySelectorAll('button, [role="button"]')];
+            if (cBtns.length > 0) {
+              const lastBtn = cBtns[cBtns.length - 1];
+              lastBtn.click();
+              return true;
+            }
+            container = container.parentElement;
+          }
+        }
+
         return false;
       });
 
-      if (!submitted) {
-        await page.screenshot({ path: screenshotPath });
-        throw new Error('Create button not clickable or prompt was rejected by Flow.');
-      }
+      console.log(`[FlowBrowserEngine] Submission triggered (submitBtnClicked: ${submitted}). Waiting for generation pipeline...`);
 
       // 6. Monitor generation output (poll for video src or download link)
-      console.log(`[FlowBrowserEngine] Video generation submitted to Veo 3.1! Polling output (up to 180s)...`);
+      console.log(`[FlowBrowserEngine] Polling Flow Veo 3.1 generation output (up to 240s)...`);
 
-      let videoUrl = null;
+      let videoInfo = null;
       const startTime = Date.now();
-      const maxWaitMs = 180000;
+      const maxWaitMs = 240000;
 
       while (Date.now() - startTime < maxWaitMs) {
+        const progressInfo = await page.evaluate(() => {
+          const texts = [...document.querySelectorAll('div, span, p')].map(e => e.textContent || '');
+          const match = texts.find(t => /\b(\d+%\s*complete|generating|creating|rendering)\b/i.test(t));
+          return match ? match.trim().slice(0, 80) : null;
+        });
+
+        if (progressInfo) {
+          console.log(`[FlowBrowserEngine] Canvas status: "${progressInfo}"`);
+        }
+
         const found = await page.evaluate(() => {
-          // Check for video tag
           const vids = [...document.querySelectorAll('video')];
           for (const v of vids) {
             const src = v.currentSrc || v.src;
-            if (src && !src.startsWith('blob:')) return src;
+            if (src && src.length > 10) {
+              return { type: src.startsWith('blob:') ? 'blob' : 'url', url: src };
+            }
           }
 
-          // Check for download button or media link
-          const links = [...document.querySelectorAll('a[download], a[href*="media"], button')];
-          const dl = links.find(l => (l.href && l.href.includes('media')) || /download/i.test(l.textContent || ''));
-          if (dl && dl.href) return dl.href;
+          const links = [...document.querySelectorAll('a[download], a[href*="media"], a[href*="video"]')];
+          for (const l of links) {
+            if (l.href) return { type: 'url', url: l.href };
+          }
 
           return null;
         });
 
         if (found) {
-          videoUrl = found;
+          videoInfo = found;
           break;
         }
 
-        // Check for error markers
         const errorText = await page.evaluate(() => {
           const body = document.body.textContent || '';
           if (/unusual activity|rate limit/i.test(body)) return 'Rate limited by Google Flow';
@@ -271,20 +306,19 @@ class FlowBrowserEngine {
           throw new Error(`Google Flow reported: ${errorText}`);
         }
 
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000));
       }
 
-      if (!videoUrl) {
+      if (!videoInfo) {
         await page.screenshot({ path: screenshotPath });
-        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (180s). Screenshot captured.');
+        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (240s). Screenshot captured.');
       }
 
-      console.log(`[FlowBrowserEngine] ✅ Veo 3.1 Video generated: ${videoUrl}`);
+      console.log(`[FlowBrowserEngine] ✅ Veo 3.1 Video located (${videoInfo.type}): ${videoInfo.url.slice(0, 80)}...`);
 
       const filename = `veo_reel_${Date.now()}.mp4`;
       const outputPath = path.join(this.outputDir, filename);
 
-      // Download the video stream inside browser session
       const base64Data = await page.evaluate(async (url) => {
         const res = await fetch(url);
         const blob = await res.blob();
@@ -293,7 +327,7 @@ class FlowBrowserEngine {
           reader.onloadend = () => resolve(reader.result);
           reader.readAsDataURL(blob);
         });
-      }, videoUrl);
+      }, videoInfo.url);
 
       const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
       fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
