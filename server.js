@@ -216,6 +216,16 @@ app.get('/api/test-flow-direct', async (req, res) => {
   }
 });
 
+// View Flow debug screenshot
+app.get('/api/flow-debug-screenshot', (req, res) => {
+  const p = path.join(config.OUTPUT_DIR, 'flow_debug_screenshot.png');
+  if (fs.existsSync(p)) {
+    res.sendFile(p);
+  } else {
+    res.status(404).send('No debug screenshot found');
+  }
+});
+
 // Save / Update Google Labs Flow Accounts
 app.post('/api/save-flow-accounts', (req, res) => {
   try {

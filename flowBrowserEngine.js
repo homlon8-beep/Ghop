@@ -45,8 +45,34 @@ class FlowBrowserEngine {
 
   async launchBrowser() {
     const puppeteer = require('puppeteer');
-    console.log(`[FlowBrowserEngine] Launching Puppeteer bundled Chrome...`);
-    const browser = await puppeteer.launch({
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || path.join(__dirname, '.cache', 'puppeteer');
+    console.log(`[FlowBrowserEngine] Launching Puppeteer with cacheDir: ${cacheDir}`);
+
+    let executablePath = null;
+    try {
+      function findChrome(dir) {
+        if (!fs.existsSync(dir)) return null;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const e of entries) {
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) {
+            const found = findChrome(full);
+            if (found) return found;
+          } else if (e.name === 'chrome' || e.name === 'chrome.exe' || e.name === 'chromium') {
+            return full;
+          }
+        }
+        return null;
+      }
+      executablePath = findChrome(cacheDir);
+      if (executablePath) {
+        console.log(`[FlowBrowserEngine] Found Chrome executable at: ${executablePath}`);
+      }
+    } catch (e) {
+      console.warn(`[FlowBrowserEngine] Error finding chrome: ${e.message}`);
+    }
+
+    const launchOptions = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -58,8 +84,12 @@ class FlowBrowserEngine {
         '--window-size=1280,800'
       ],
       defaultViewport: { width: 1280, height: 800 }
-    });
+    };
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
 
+    const browser = await puppeteer.launch(launchOptions);
     return browser;
   }
 
@@ -71,6 +101,21 @@ class FlowBrowserEngine {
 
     const browser = await this.launchBrowser();
     const page = await browser.newPage();
+
+    // Log significant network events for debugging
+    page.on('request', req => {
+      const u = req.url();
+      if (u.includes('aisandbox') || u.includes('flow') || u.includes('stream') || u.includes('generate')) {
+        console.log(`[Flow Network REQ] ${req.method()} ${u.slice(0, 140)}`);
+      }
+    });
+
+    page.on('response', res => {
+      const u = res.url();
+      if (u.includes('aisandbox') || u.includes('stream') || u.includes('generate')) {
+        console.log(`[Flow Network RES] ${res.status()} ${u.slice(0, 140)}`);
+      }
+    });
 
     // Capture screenshot on error for debugging
     const screenshotPath = path.join(this.outputDir, 'flow_debug_screenshot.png');
