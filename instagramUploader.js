@@ -325,11 +325,22 @@ class InstagramUploader {
 
     console.log(`[InstagramUploader] 🚀 Publishing Reel via verified Web API to @feticid (Upload ID: ${uploadId})...`);
 
+    // Probe exact specs to prevent Instagram transcode distortion/pixel tearing
+    let actualWidth = 1080;
+    let actualHeight = 1920;
+    let actualDurationMs = 16000;
+    try {
+      const specs = this.validateVideoForReels(videoPath);
+      if (specs.width) actualWidth = specs.width;
+      if (specs.height) actualHeight = specs.height;
+      if (specs.duration) actualDurationMs = Math.round(specs.duration * 1000);
+    } catch (e) {}
+
     // 1. Upload Video
     const videoParams = JSON.stringify({
-      upload_media_height: 1920,
-      upload_media_width: 1080,
-      upload_media_duration_ms: 16000,
+      upload_media_height: actualHeight,
+      upload_media_width: actualWidth,
+      upload_media_duration_ms: actualDurationMs,
       upload_id: uploadId,
       media_type: 2,
       for_album: false

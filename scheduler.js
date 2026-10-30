@@ -144,33 +144,34 @@ class SocialBotScheduler {
 
     try {
       // 1. Script Generation with Surreal Episodic Memory
-      console.log(`[Step 1/3] Generating viral surreal script with Groq 120B memory...`);
+      console.log(`[Step 1/3] Generating viral Indian meme script with Groq 120B memory...`);
       const storyData = await surrealStoryEngine.generateEpisode(forcePart);
 
-      // Build ultra-viral Indian meme Veo 3.1 prompt ("Ayy Halku re!" style)
-      const scene1 = storyData.visualScenes?.[0]?.prompt || storyData.hook || 'Indian setting with weightless floating auto-rickshaw';
-      const scene2 = storyData.visualScenes?.[1]?.prompt || '';
-      const isPart1 = storyData.part === 1;
-      const veoPrompt = isPart1
-        ? `cinematic 3D animation, photorealistic Bollywood dramatic physics, 9:16 vertical video of ${scene1}, ${scene2}, Ayy Halku re viral trend, vibrant Indian festive neon lighting, 8k render`
-        : `cinematic 3D animation, photorealistic Bollywood dramatic physics, 9:16 vertical video of ${scene1}, ${scene2}, resolving floating cliffhanger with grand festive Indian celebration, colorful fireworks and confetti, 8k render`;
+      // Extract Shot 1 (0-8s Setup/Trigger) and Shot 2 (8-16s Climax/Explosion)
+      const shot1Prompt = storyData.visualScenes?.[0]?.prompt || storyData.hook || 'Indian setting with chaotic meme action, 9:16 vertical 8k render';
+      const shot2Prompt = storyData.visualScenes?.[1]?.prompt || 'Insane explosive escalation and cliffhanger freeze frame in Indian city, 9:16 vertical 8k render';
 
       const scriptData = {
         ...storyData,
         niche: storyData.title,
-        nicheId: `surreal_pt${storyData.part}_${Date.now()}`,
+        nicheId: `desi_pt${storyData.part}_${Date.now()}`,
         caption: storyData.instagramCaption || storyData.caption,
-        veoPrompt
+        shot1Prompt,
+        shot2Prompt
       };
 
       this.state.status = 'generating_video';
       this.state.lastNiche = scriptData.title;
       this.saveState();
 
-      // 2. Google AI Pro Flow Veo 3.1 Video Generation
-      console.log(`\n[Step 2/3] Generating authentic Google Flow Veo 3.1 Reel video...`);
-      console.log(`   Veo Prompt: "${veoPrompt}"`);
-      const videoResult = await flowBrowserEngine.generateVeoVideo(veoPrompt);
+      // 2. Google AI Pro Flow Veo 3.1 Two-Shot Video Generation & 1080p HD Mastering
+      console.log(`\n[Step 2/3] Generating authentic Google Flow Veo 3.1 Two-Shot 16s Reel...`);
+      console.log(`   Shot 1 Prompt: "${shot1Prompt.slice(0, 90)}..."`);
+      console.log(`   Shot 2 Prompt: "${shot2Prompt.slice(0, 90)}..."`);
+      const videoResult = await flowBrowserEngine.generateVeoVideo({
+        shot1: shot1Prompt,
+        shot2: shot2Prompt
+      });
 
       this.state.status = shouldUpload ? 'publishing_reel' : 'staging_reel';
       this.saveState();

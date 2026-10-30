@@ -1,19 +1,20 @@
 {
-  "activeSeriesId": "series_desi_001",
+  "activeSeriesId": "series_desi_nuclear_001",
   "lastUploadedPart": 2,
   "lastUploadedSlot": "evening",
-  "lastUploadedAt": "2026-10-30T11:42:00.000Z",
+  "lastUploadedAt": "2026-10-30T12:00:00.000Z",
   "nextEpisodeDue": "part1",
   "currentStory": {
-    "title": "Auto Wale Bhaiya Entered Orbit | Ayy Halku Re!",
+    "title": "Nuclear Bomb Gir Gaya Reee! 💥 | Indian Meme Saga",
+    "trend": "Nuclear Bomb Gir Gaya Reee!",
     "characters": [
-      "Raju Auto Wala",
+      "Chintu",
       "Sharma Ji"
     ],
-    "hook": "Bhai ne auto me CNG ki jagah cutting chai daal di!",
-    "cliffhanger": "Auto sidha cloud 9 cross kar gaya—Sharma ji meter pakad ke chillaye! Will they return?",
+    "hook": "Bhai ne sutli bomb me 100 kadak chai daal di... NUCLEAR BOMB GIR GAYA REEE! 💥",
+    "cliffhanger": "The colorful rainbow nuclear cloud lifted the whole bazaar into the sky!",
     "part1Slot": "morning",
-    "part1Timestamp": "2026-10-30T11:42:00.000Z",
+    "part1Timestamp": "2026-10-30T12:00:00.000Z",
     "part2Summary": "",
     "part2Timestamp": null
   },

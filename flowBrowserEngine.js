@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const config = require('./config');
 
 class FlowBrowserEngine {
@@ -9,7 +10,6 @@ class FlowBrowserEngine {
   }
 
   loadSession() {
-    // 1. Check environment variable first (for Render cloud)
     if (process.env.FLOW_COOKIES_JSON) {
       try {
         const parsed = JSON.parse(process.env.FLOW_COOKIES_JSON);
@@ -17,7 +17,6 @@ class FlowBrowserEngine {
       } catch (e) {}
     }
 
-    // 2. Check flow_accounts.json
     try {
       if (fs.existsSync(this.accountsFile)) {
         const data = JSON.parse(fs.readFileSync(this.accountsFile, 'utf8'));
@@ -30,7 +29,6 @@ class FlowBrowserEngine {
       console.warn(`[FlowBrowserEngine] Could not read accounts file: ${e.message}`);
     }
 
-    // 3. Fallback to /sdcard/Download/cookies.json if on Termux
     const sdcardPath = '/sdcard/Download/cookies.json';
     try {
       if (fs.existsSync(sdcardPath)) {
@@ -93,41 +91,174 @@ class FlowBrowserEngine {
     return browser;
   }
 
-  async generateVeoVideo(prompt, options = {}) {
+  async submitPromptAndPollVideo(page, promptText, shotNum, capturedUrls, screenshotPath) {
+    console.log(`\n[FlowBrowserEngine] 🎬 --- Generating Shot ${shotNum} in Veo 3.1 ---`);
+    console.log(`   Prompt: "${promptText.slice(0, 110)}..."`);
+
+    // Type prompt into contenteditable div
+    const promptBox = await page.$('[role="textbox"][contenteditable="true"]');
+    if (!promptBox) {
+      throw new Error(`Prompt textbox not found for shot ${shotNum}`);
+    }
+    await promptBox.click();
+    await page.keyboard.down('Control');
+    await page.keyboard.press('A');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Backspace');
+    await new Promise(r => setTimeout(r, 300));
+
+    await page.type('[role="textbox"][contenteditable="true"]', promptText, { delay: 10 });
+    await new Promise(r => setTimeout(r, 600));
+
+    // Submit generation (Press Enter & Click Arrow Button)
+    console.log(`[FlowBrowserEngine] Submitting Shot ${shotNum} to Veo 3.1...`);
+    await page.keyboard.press('Enter');
+    await new Promise(r => setTimeout(r, 800));
+
+    await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button, [role="button"]')];
+      for (const b of btns) {
+        const text = (b.textContent || '').trim().toLowerCase();
+        const label = (b.getAttribute('aria-label') || '').toLowerCase();
+        const html = b.innerHTML.toLowerCase();
+        if (label.includes('send') || label.includes('generate') || label.includes('submit') || label.includes('create') || html.includes('arrow_forward')) {
+          b.click();
+          return;
+        }
+      }
+      const pb = document.querySelector('[role="textbox"][contenteditable="true"]');
+      if (pb && pb.parentElement) {
+        const cBtns = [...pb.parentElement.querySelectorAll('button, [role="button"]')];
+        if (cBtns.length > 0) cBtns[cBtns.length - 1].click();
+      }
+    });
+
+    // Baseline count of known video URLs before this shot finishes
+    const initialUrlCount = capturedUrls.length;
+    console.log(`[FlowBrowserEngine] Polling Veo 3.1 output for Shot ${shotNum} (up to 240s)...`);
+
+    const startTime = Date.now();
+    const maxWaitMs = 240000;
+    let videoUrl = null;
+    let loopCount = 0;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      loopCount++;
+      await new Promise(r => setTimeout(r, 3500));
+
+      // 1. Check if a new video URL was captured via network
+      if (capturedUrls.length > initialUrlCount) {
+        videoUrl = capturedUrls[capturedUrls.length - 1];
+        console.log(`[FlowBrowserEngine] Detected new video stream URL for Shot ${shotNum}: ${videoUrl.slice(0, 80)}`);
+        break;
+      }
+
+      // 2. Click thumbnail cards on canvas to activate video player
+      if (loopCount >= 2) {
+        await page.evaluate(() => {
+          const imgs = [...document.querySelectorAll('img')].filter(i => i.src && i.src.includes('flow-content.google'));
+          if (imgs.length > 0) {
+            const card = imgs[imgs.length - 1].closest('[role="button"], button') || imgs[imgs.length - 1];
+            card.click();
+          }
+        });
+      }
+
+      // 3. Check for DOM video tags
+      const domVideoUrl = await page.evaluate(() => {
+        const vids = [...document.querySelectorAll('video')];
+        for (const v of vids) {
+          const src = v.currentSrc || v.src;
+          if (src && src.includes('flow-content.google')) return src;
+        }
+        return null;
+      });
+
+      if (domVideoUrl && !capturedUrls.slice(0, initialUrlCount).includes(domVideoUrl)) {
+        videoUrl = domVideoUrl;
+        break;
+      }
+    }
+
+    if (!videoUrl) {
+      try { await page.screenshot({ path: screenshotPath }); } catch (e) {}
+      throw new Error(`Shot ${shotNum} timed out waiting for Veo 3.1 video render`);
+    }
+
+    // Download Shot MP4
+    const shotPath = path.join(this.outputDir, `shot_${shotNum}_${Date.now()}.mp4`);
+    console.log(`[FlowBrowserEngine] Downloading Shot ${shotNum} from: ${videoUrl.slice(0, 80)}...`);
+
+    try {
+      const res = await fetch(videoUrl);
+      const arrayBuf = await res.arrayBuffer();
+      fs.writeFileSync(shotPath, Buffer.from(arrayBuf));
+    } catch (e) {
+      // In-page fallback
+      const base64Data = await page.evaluate(async (url) => {
+        const r = await fetch(url);
+        const blob = await r.blob();
+        return new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }, videoUrl);
+      const clean = base64Data.replace(/^data:video\/\w+;base64,/, '');
+      fs.writeFileSync(shotPath, Buffer.from(clean, 'base64'));
+    }
+
+    console.log(`[FlowBrowserEngine] ✅ Shot ${shotNum} downloaded: ${shotPath} (${fs.statSync(shotPath).size} bytes)`);
+    return shotPath;
+  }
+
+  async generateVeoVideo(promptOrShots, options = {}) {
     const cookiesList = this.loadSession();
     if (!cookiesList || cookiesList.length === 0) {
       throw new Error('No authenticated Google Flow cookies found. Please provide session cookies.');
     }
 
+    // Parse shot prompts
+    let shot1Prompt = '';
+    let shot2Prompt = null;
+
+    if (typeof promptOrShots === 'string') {
+      shot1Prompt = promptOrShots;
+    } else if (Array.isArray(promptOrShots)) {
+      shot1Prompt = promptOrShots[0] || '';
+      shot2Prompt = promptOrShots[1] || null;
+    } else if (typeof promptOrShots === 'object' && promptOrShots !== null) {
+      shot1Prompt = promptOrShots.shot1 || promptOrShots.prompt || '';
+      shot2Prompt = promptOrShots.shot2 || null;
+      if (!shot1Prompt && promptOrShots.visualScenes) {
+        shot1Prompt = promptOrShots.visualScenes[0]?.prompt || '';
+        shot2Prompt = promptOrShots.visualScenes[1]?.prompt || null;
+      }
+    }
+
+    if (!shot1Prompt) {
+      throw new Error('No valid prompt provided for Veo 3.1 generation');
+    }
+
     const browser = await this.launchBrowser();
     const page = await browser.newPage();
+    const capturedUrls = [];
 
-    // Log significant network events for debugging
-    page.on('request', req => {
-      const u = req.url();
-      if (u.includes('aisandbox') || u.includes('flow') || u.includes('stream') || u.includes('generate')) {
-        console.log(`[Flow Network REQ] ${req.method()} ${u.slice(0, 140)}`);
-      }
-    });
-
-    let capturedVideoUrl = null;
-    page.on('response', async res => {
+    page.on('response', res => {
       const u = res.url();
       const ct = res.headers()['content-type'] || '';
       if (
-        (ct.includes('video/') || u.includes('.mp4')) &&
+        (ct.includes('video/') || u.includes('.mp4') || u.includes('/video/')) &&
         !u.includes('banner') &&
         !u.includes('gstatic.com')
       ) {
-        console.log(`[Flow Captured Video URL] ${u.slice(0, 120)}`);
-        capturedVideoUrl = u;
-      }
-      if (u.includes('aisandbox') || u.includes('stream') || u.includes('generate')) {
-        console.log(`[Flow Network RES] ${res.status()} ${u.slice(0, 140)}`);
+        if (!capturedUrls.includes(u)) {
+          console.log(`[Flow Captured Video URL] ${u.slice(0, 100)}`);
+          capturedUrls.push(u);
+        }
       }
     });
 
-    // Capture screenshot on error for debugging
     const screenshotPath = path.join(this.outputDir, 'flow_debug_screenshot.png');
 
     try {
@@ -143,22 +274,18 @@ class FlowBrowserEngine {
 
       await page.setCookie(...puppeteerCookies);
 
-      // Navigate to Google Flow
       console.log(`[FlowBrowserEngine] Navigating to https://flow.google.com/...`);
       await page.goto('https://flow.google.com/', {
         waitUntil: 'networkidle2',
         timeout: 45000
       });
 
-      const pageTitle = await page.title();
-      console.log(`[FlowBrowserEngine] Page loaded: "${pageTitle}" (${page.url()})`);
-
       if (page.url().includes('accounts.google.com/ServiceLogin')) {
         await page.screenshot({ path: screenshotPath });
         throw new Error('Google session expired or rejected. Sign-in required.');
       }
 
-      // 1. Check if on Dashboard and click "New project"
+      // Check for New project button if editor not mounted
       const hasPromptBox = await page.$('[role="textbox"][contenteditable="true"]');
       if (!hasPromptBox) {
         console.log(`[FlowBrowserEngine] Inside dashboard. Clicking "New project" button...`);
@@ -173,31 +300,26 @@ class FlowBrowserEngine {
         });
 
         if (clickedNewProject) {
-          console.log(`[FlowBrowserEngine] Clicked "New project". Waiting for editor to mount...`);
           await new Promise(r => setTimeout(r, 4000));
         }
       }
 
-      // 2. Wait for prompt editor
-      console.log(`[FlowBrowserEngine] Waiting for prompt editor to mount...`);
       await page.waitForSelector('[role="textbox"][contenteditable="true"]', { timeout: 30000 });
 
-      // 3. Select Video mode & 9:16 ratio via DOM evaluation
+      // Set Video mode & 9:16 vertical ratio
       console.log(`[FlowBrowserEngine] Setting Video mode & 9:16 vertical ratio...`);
       await page.evaluate(() => {
         const btns = [...document.querySelectorAll('button, [role="button"]')];
         const settingsBtn = btns.find(b => /crop_|video|image/i.test(b.textContent || ''));
         if (settingsBtn) settingsBtn.click();
       });
-
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 500));
 
       await page.evaluate(() => {
         const btns = [...document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="option"]')];
         const videoBtn = btns.find(b => /video/i.test(b.textContent || '') && !/image/i.test(b.textContent || ''));
         if (videoBtn) videoBtn.click();
       });
-
       await new Promise(r => setTimeout(r, 400));
 
       await page.evaluate(() => {
@@ -205,227 +327,56 @@ class FlowBrowserEngine {
         const ratioBtn = btns.find(b => /9:16/i.test(b.textContent || ''));
         if (ratioBtn) ratioBtn.click();
       });
-
       await page.keyboard.press('Escape');
-      await new Promise(r => setTimeout(r, 400));
-
-      // 4. Type prompt into contenteditable div
-      console.log(`[FlowBrowserEngine] Entering prompt into Veo 3.1...`);
-      const promptBox = await page.$('[role="textbox"][contenteditable="true"]');
-      await promptBox.click();
-      await page.keyboard.down('Control');
-      await page.keyboard.press('A');
-      await page.keyboard.up('Control');
-      await page.keyboard.press('Backspace');
-
-      await page.type('[role="textbox"][contenteditable="true"]', prompt, { delay: 10 });
       await new Promise(r => setTimeout(r, 500));
 
-      // 5. Submit generation (Press Enter & Click Arrow Button)
-      console.log(`[FlowBrowserEngine] Submitting generation to Veo 3.1...`);
-      await page.keyboard.press('Enter');
-      await new Promise(r => setTimeout(r, 800));
+      // 1. Generate Shot 1 (0-8s Setup & Hook)
+      const shot1Path = await this.submitPromptAndPollVideo(page, shot1Prompt, 1, capturedUrls, screenshotPath);
 
-      const submitted = await page.evaluate(() => {
-        const btns = [...document.querySelectorAll('button, [role="button"]')];
-
-        for (const b of btns) {
-          const text = (b.textContent || '').trim().toLowerCase();
-          const label = (b.getAttribute('aria-label') || '').toLowerCase();
-          const html = b.innerHTML.toLowerCase();
-
-          if (label.includes('send') || label.includes('generate') || label.includes('submit') || label.includes('create')) {
-            b.click();
-            return true;
-          }
-          if (html.includes('arrow_forward') || html.includes('send') || html.includes('arrow_right')) {
-            b.click();
-            return true;
-          }
-        }
-
-        const promptBox = document.querySelector('[role="textbox"][contenteditable="true"]');
-        if (promptBox) {
-          let container = promptBox.parentElement;
-          for (let i = 0; i < 4 && container; i++) {
-            const cBtns = [...container.querySelectorAll('button, [role="button"]')];
-            if (cBtns.length > 0) {
-              const lastBtn = cBtns[cBtns.length - 1];
-              lastBtn.click();
-              return true;
-            }
-            container = container.parentElement;
-          }
-        }
-
-        return false;
-      });
-
-      console.log(`[FlowBrowserEngine] Submission triggered (submitBtnClicked: ${submitted}). Waiting for generation pipeline...`);
-      await new Promise(r => setTimeout(r, 2000));
-      try { await page.screenshot({ path: screenshotPath }); } catch (e) {}
-
-      // 6. Monitor generation output (poll for video src or download link)
-      console.log(`[FlowBrowserEngine] Polling Flow Veo 3.1 generation output (up to 300s)...`);
-
-      let videoInfo = null;
-      const startTime = Date.now();
-      const maxWaitMs = 300000;
-      let loopCount = 0;
-
-      while (Date.now() - startTime < maxWaitMs) {
-        loopCount++;
-        if (loopCount % 3 === 0) {
-          try { await page.screenshot({ path: screenshotPath }); } catch (e) {}
-        }
-
-        const progressInfo = await page.evaluate(() => {
-          const texts = [...document.querySelectorAll('div, span, p')].map(e => e.textContent || '');
-          const match = texts.find(t => /\b(\d+%\s*complete|generating|creating|rendering)\b/i.test(t));
-          return match ? match.trim().slice(0, 80) : null;
-        });
-
-        if (progressInfo) {
-          console.log(`[FlowBrowserEngine] Canvas status: "${progressInfo}"`);
-        }
-
-        // Check if captured directly via network response (ignoring homepage banners)
-        if (capturedVideoUrl && !capturedVideoUrl.includes('gstatic.com') && !capturedVideoUrl.includes('banner')) {
-          console.log(`[FlowBrowserEngine] Detected authentic video stream URL: ${capturedVideoUrl.slice(0, 80)}`);
-          videoInfo = { type: 'url', url: capturedVideoUrl };
-          break;
-        }
-
-        // Once card thumbnail appears and rendering is complete (or no progress percentage), click card to mount video player
-        if (loopCount >= 2 && !progressInfo) {
-          await page.evaluate(() => {
-            const imgs = [...document.querySelectorAll('img')].filter(i => i.src && i.src.includes('flow-content.google'));
-            if (imgs.length > 0) {
-              const card = imgs[0].closest('[role="button"], button') || imgs[0].parentElement || imgs[0];
-              card.click();
-            } else {
-              const playIcon = [...document.querySelectorAll('*')].find(el => el.textContent?.trim() === 'play_arrow');
-              if (playIcon) playIcon.click();
-            }
-          });
-          await new Promise(r => setTimeout(r, 1000));
-        }
-
-        const found = await page.evaluate(() => {
-          // 1. Check for standard video elements
-          const vids = [...document.querySelectorAll('video')];
-          for (const v of vids) {
-            const src = v.currentSrc || v.src || (v.querySelector('source') ? v.querySelector('source').src : null);
-            if (src && src.length > 10) {
-              return { type: src.startsWith('blob:') ? 'blob' : 'url', url: src };
-            }
-          }
-
-          // 2. Check for download buttons or menu links
-          const links = [...document.querySelectorAll('a[download], a[href*="media"], a[href*="video"], a[href*="flow-content"]')];
-          for (const l of links) {
-            if (l.href && !l.href.includes('gstatic.com') && !l.href.includes('banner')) return { type: 'url', url: l.href };
-          }
-
-          // 3. Check for elements with download or media attributes
-          const dlElements = [...document.querySelectorAll('[data-download-url], [data-video-url], [data-url]')];
-          for (const el of dlElements) {
-            const u = el.getAttribute('data-download-url') || el.getAttribute('data-video-url') || el.getAttribute('data-url');
-            if (u && !u.includes('gstatic.com') && !u.includes('banner')) return { type: 'url', url: u };
-          }
-
-          return null;
-        });
-
-        if (found) {
-          videoInfo = found;
-          break;
-        }
-
-        const errorText = await page.evaluate(() => {
-          const body = document.body.textContent || '';
-          if (/unusual activity|rate limit/i.test(body)) return 'Rate limited by Google Flow';
-          if (/insufficient credits|no credits/i.test(body)) return 'Out of Google Flow credits';
-          if (/violates|content policy/i.test(body)) return 'Prompt blocked by Google content policy';
-          return null;
-        });
-
-        if (errorText) {
-          await page.screenshot({ path: screenshotPath });
-          throw new Error(`Google Flow reported: ${errorText}`);
-        }
-
-        await new Promise(r => setTimeout(r, 4000));
-      }
-
-      if (!videoInfo) {
-        await page.screenshot({ path: screenshotPath });
-        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (300s). Screenshot captured.');
-      }
-
-      console.log(`[FlowBrowserEngine] ✅ Veo 3.1 Video located (${videoInfo.type}): ${videoInfo.url.slice(0, 80)}...`);
-
-      const filename = `veo_reel_${Date.now()}.mp4`;
-      const outputPath = path.join(this.outputDir, filename);
-
-      if (videoInfo.type === 'blob' || videoInfo.url.startsWith('blob:')) {
-        const base64Data = await page.evaluate(async (url) => {
-          const res = await fetch(url);
-          const blob = await res.blob();
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-          });
-        }, videoInfo.url);
-
-        const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
-        fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
-      } else {
+      // 2. Generate Shot 2 (8-16s Climax & Twist) if specified
+      let shot2Path = null;
+      if (shot2Prompt) {
         try {
-          const res = await fetch(videoInfo.url);
-          const arrayBuf = await res.arrayBuffer();
-          fs.writeFileSync(outputPath, Buffer.from(arrayBuf));
-        } catch (fetchErr) {
-          // Fallback to in-page evaluate download
-          const base64Data = await page.evaluate(async (url) => {
-            const res = await fetch(url);
-            const blob = await res.blob();
-            return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          }, videoInfo.url);
-          const cleanBase64 = base64Data.replace(/^data:video\/\w+;base64,/, '');
-          fs.writeFileSync(outputPath, Buffer.from(cleanBase64, 'base64'));
+          await new Promise(r => setTimeout(r, 2000));
+          shot2Path = await this.submitPromptAndPollVideo(page, shot2Prompt, 2, capturedUrls, screenshotPath);
+        } catch (shot2Err) {
+          console.warn(`[FlowBrowserEngine] Shot 2 generation issue (${shot2Err.message}). Proceeding with Shot 1 mastering.`);
         }
       }
 
-      console.log(`[FlowBrowserEngine] Successfully downloaded Veo 3.1 video to: ${outputPath} (${fs.statSync(outputPath).size} bytes)`);
+      // 3. Master into Crystal-Clear 1080x1920 Full HD (16.0s exact, lanczos upscale, unsharp edge sharpening)
+      console.log(`\n[FlowBrowserEngine] 🎛️ Mastering final 16-second Reel in Full HD 1080x1920 with FFmpeg...`);
+      const finalOutputPath = path.join(this.outputDir, `veo_reel_master_${Date.now()}.mp4`);
 
-      // Enforce 16-second exact duration for Instagram Reels
-      let finalVideoPath = outputPath;
-      let finalDuration = 16.0;
-      const output16sPath = outputPath.replace(/\.mp4$/i, '_16s.mp4');
-      try {
-        const { execSync } = require('child_process');
-        console.log(`[FlowBrowserEngine] Enhancing Veo clip to 16-second Reel format via FFmpeg stream_loop...`);
-        execSync(`ffmpeg -y -stream_loop 1 -i "${outputPath}" -c copy "${output16sPath}"`, { stdio: 'ignore' });
-        if (fs.existsSync(output16sPath) && fs.statSync(output16sPath).size > 1000) {
-          finalVideoPath = output16sPath;
-          console.log(`[FlowBrowserEngine] ✅ Enhanced to 16.0s video (${fs.statSync(finalVideoPath).size} bytes)`);
-        }
-      } catch (e) {
-        console.warn(`[FlowBrowserEngine] 16s enhancement notice: ${e.message}`);
+      if (shot2Path && fs.existsSync(shot2Path)) {
+        // True 2-Shot Narrative Concatenation (Shot 1 + Shot 2 = 16s exact, NO LOOPING)
+        console.log(`[FlowBrowserEngine] 🎬 Concatenating Shot 1 + Shot 2 into true 16-second narrative film!`);
+        const concatCmd = `ffmpeg -y -i "${shot1Path}" -i "${shot2Path}" -filter_complex "[0:v][1:v]concat=n=2:v=1[cv];[cv]scale=1080:1920:flags=lanczos,unsharp=3:3:0.4:3:3:0.0,fps=30[outv]" -map "[outv]" -c:v libx264 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 12M -maxrate 15M -bufsize 20M -g 60 -movflags +faststart "${finalOutputPath}"`;
+        execSync(concatCmd, { stdio: 'ignore' });
+      } else {
+        // Single Shot Mastered to 1080x1920 with high-bitrate stream-loop to guarantee 16s
+        console.log(`[FlowBrowserEngine] 🎬 Mastering Shot 1 into 1080x1920 Full HD Reel...`);
+        const singleCmd = `ffmpeg -y -stream_loop 1 -i "${shot1Path}" -vf "scale=1080:1920:flags=lanczos,unsharp=3:3:0.4:3:3:0.0,fps=30" -c:v libx264 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 12M -maxrate 15M -bufsize 20M -g 60 -movflags +faststart "${finalOutputPath}"`;
+        execSync(singleCmd, { stdio: 'ignore' });
       }
+
+      if (!fs.existsSync(finalOutputPath) || fs.statSync(finalOutputPath).size < 1000) {
+        throw new Error('FFmpeg mastering failed to produce valid 1080x1920 video');
+      }
+
+      const finalSize = fs.statSync(finalOutputPath).size;
+      console.log(`[FlowBrowserEngine] 🎉 Mastered HD Reel Ready: ${finalOutputPath} (${finalSize} bytes, 1080x1920 @ 30fps)`);
 
       return {
         success: true,
         source: 'google-flow-veo-3.1',
-        videoPath: finalVideoPath,
-        durationSec: finalDuration,
-        prompt
+        videoPath: finalOutputPath,
+        durationSec: 16.0,
+        width: 1080,
+        height: 1920,
+        isTwoShot: Boolean(shot2Path),
+        shot1Path,
+        shot2Path
       };
     } catch (err) {
       try {
