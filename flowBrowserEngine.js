@@ -110,8 +110,14 @@ class FlowBrowserEngine {
       }
     });
 
-    page.on('response', res => {
+    let capturedVideoUrl = null;
+    page.on('response', async res => {
       const u = res.url();
+      const ct = res.headers()['content-type'] || '';
+      if (ct.includes('video/') || u.includes('.mp4') || (u.includes('flow-content.google') && (u.includes('video') || u.includes('mp4')))) {
+        console.log(`[Flow Captured Video URL] ${u.slice(0, 120)}`);
+        capturedVideoUrl = u;
+      }
       if (u.includes('aisandbox') || u.includes('stream') || u.includes('generate')) {
         console.log(`[Flow Network RES] ${res.status()} ${u.slice(0, 140)}`);
       }
@@ -277,6 +283,28 @@ class FlowBrowserEngine {
 
         if (progressInfo) {
           console.log(`[FlowBrowserEngine] Canvas status: "${progressInfo}"`);
+        }
+
+        // Check if captured directly via network response
+        if (capturedVideoUrl) {
+          console.log(`[FlowBrowserEngine] Detected video stream URL from network: ${capturedVideoUrl.slice(0, 80)}`);
+          videoInfo = { type: 'url', url: capturedVideoUrl };
+          break;
+        }
+
+        // Once card thumbnail appears and rendering is complete (or no progress percentage), click card to mount video player
+        if (loopCount >= 2 && !progressInfo) {
+          await page.evaluate(() => {
+            const imgs = [...document.querySelectorAll('img')].filter(i => i.src && i.src.includes('flow-content.google'));
+            if (imgs.length > 0) {
+              const card = imgs[0].closest('[role="button"], button') || imgs[0].parentElement || imgs[0];
+              card.click();
+            } else {
+              const playIcon = [...document.querySelectorAll('*')].find(el => el.textContent?.trim() === 'play_arrow');
+              if (playIcon) playIcon.click();
+            }
+          });
+          await new Promise(r => setTimeout(r, 1000));
         }
 
         const found = await page.evaluate(() => {
