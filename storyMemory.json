@@ -1,58 +1,21 @@
 {
-  "activeSeriesId": "series_1793357130798",
-  "lastEpisodeType": "finale",
-  "lastPostSlot": "evening",
+  "activeSeriesId": "series_desi_001",
+  "lastUploadedPart": 2,
+  "lastUploadedSlot": "evening",
+  "lastUploadedAt": "2026-10-30T11:42:00.000Z",
+  "nextEpisodeDue": "part1",
   "currentStory": {
-    "title": "The Sneezing Kid Who Became a Neon Bouncy Ball",
+    "title": "Auto Wale Bhaiya Entered Orbit | Ayy Halku Re!",
     "characters": [
-      "Kid turned neon ball",
-      "Sheru Bhai"
+      "Raju Auto Wala",
+      "Sharma Ji"
     ],
-    "hook": "Kid sneezes, *POP!*—a glowing rubber ball bursts out of his nose!",
-    "part1Summary": "Achoo! Little Timmy sneezes and POP!—he explodes into a neon glowing rubber ball, bouncing *ghop ghop gop* across the night sky. Sheru Bhai bursts onto the scene, wielding a million‑dollar magnetic net, racing the glowing orb. Will he catch it? Part 2 drops TOMORROW MORNING at 11:30 AM EST! 🍿",
-    "cliffhanger": "Sheru Bhai lunges with his mega‑net, but the ball slips into a swirling portal—will he survive the mystery?",
-    "part1Slot": "evening",
-    "part1Timestamp": "2026-10-30T10:45:30.798Z",
+    "hook": "Bhai ne auto me CNG ki jagah cutting chai daal di!",
+    "cliffhanger": "Auto sidha cloud 9 cross kar gaya—Sharma ji meter pakad ke chillaye! Will they return?",
+    "part1Slot": "morning",
+    "part1Timestamp": "2026-10-30T11:42:00.000Z",
     "part2Summary": "",
     "part2Timestamp": null
   },
-  "completedSeries": [
-    {
-      "id": "series_1793341684825",
-      "title": "Sneezed Into a Neon Bouncy Ball!",
-      "completedAt": "2026-10-30T08:16:39.225Z",
-      "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai lunges, but the net snaps—who will catch it?",
-      "finaleSummary": "Part 2! In our last episode Timmy’s sneeze turned him into a neon bouncy ball and the portal was about to swallow him. *GHOP GHOP GOP!* Sheru Bhai’s million‑dollar magnet‑umbrella snaps, but a reverse‑gravity trampoline springs out of thin air, catapulting the net upward. The net catches the glowing orb, flips it back, and—boom!—the ball bursts into a confetti‑filled fireworks explosion that turns Timmy back into a kid with a glittery cape. And there’s the million‑dollar prize glitter raining down! What should transform in tomorrow's saga? Drop it in the comments! 👇"
-    },
-    {
-      "id": "series_1793341684825",
-      "title": "Sneezed Into a Neon Bouncy Ball!",
-      "completedAt": "2026-10-30T08:16:10.447Z",
-      "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai lunges, but the net snaps—who will catch it?",
-      "finaleSummary": "Part 2! In our last episode Timmy’s neon sneeze‑ball rocketed toward a glowing portal while Sheru Bhai’s million‑dollar magnet‑umbrella snapped shut. *GHOP GHOP GOP!* Suddenly a reverse‑gravity trampoline erupts from the portal, flipping the net upside‑down and catching the ball like a popcorn kernel! Sheru Bhai rides the trampoline, launches the ball back, and it bursts into a confetti explosion that turns Timmy into a giggling glitter‑goose, flapping into the sunrise. Mission complete—don’t miss tomorrow’s chaos! What should transform in tomorrow's saga? Drop it in the comments! 👇"
-    },
-    {
-      "id": "series_1793339182825",
-      "title": "The Sneezing Kid Who Became a Bouncy Ball",
-      "completedAt": "2026-10-30T06:18:39.815Z",
-      "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai’s net snaps shut—will he catch it?",
-      "finaleSummary": "Part 2! In our last episode Sheru Bhai’s magnet‑net snapped shut just as the neon ball hurtled toward the glowing portal. *GHOP GHOP GOP!* The net sprouts a million‑dollar trampoline, flips gravity upside‑down, and launches the ball back with a confetti‑burst cannon—transforming the kid into a glitter‑covered superhero rubber duck! He lands with a triumphant *boing* and winks at the camera. What should transform in tomorrow's saga? Drop it in the comments! 👇"
-    },
-    {
-      "id": "series_1793338577107",
-      "title": "The Sneezing Bouncy Ball Blitz",
-      "completedAt": "2026-10-30T05:36:19.216Z",
-      "cliffhanger": "Sheru Bhai lunges, but the ball bursts into a swirling portal—what's on the other side? Find out tomorrow!",
-      "finaleSummary": "Part 2! In our last episode Sheru Bhai lunged, but the neon ball burst into a swirling portal—*GHOP GHOP GOP!*—and out popped a million‑dollar trampoline that flung Timmy into reverse gravity orbit! He spins like a disco pizza, lands on a candy‑cloud, and poof! Transforms back into a giggling kid‑ball hybrid holding a glittery jackpot trophy. Sheru Bhai screams, \"My magnet‑net just turned into a confetti cannon!\" End scene with a triumphant shout: What should transform in tomorrow's saga? Drop it in the comments! 👇"
-    },
-    {
-      "id": "series_001",
-      "title": "The Boy Who Turned Into a Bouncy Ball",
-      "completedAt": "2026-10-30T05:30:22.562Z"
-    }
-  ],
-  "lastUploadedPart": 1,
-  "lastUploadedSlot": "evening",
-  "lastUploadedAt": "2026-10-30T10:45:30.798Z",
-  "nextEpisodeDue": "part2"
+  "completedSeries": []
 }

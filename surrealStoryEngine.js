@@ -1,14 +1,14 @@
 /**
- * MorphVerse Surreal Story Engine
- * Autonomous AI Episodic Storyteller with Ironclad Persistent Memory
+ * MorphVerse Indian Viral Meme Story Engine
+ * Autonomous AI Episodic Storyteller for Indian Trending Reel Lore ("Ayy Halku re!" Style)
  * 
  * Powered by Groq API (openai/gpt-oss-120b)
- * Remembers Part 1 & Part 2 continuity across morning/evening slots:
- * - If Part 1 was posted in morning -> Part 2 posts in evening
- * - If Part 1 was posted in evening -> Part 2 posts tomorrow morning
- * 
- * Generates absurd, viral, high-dopamine AI transformation reels:
- * (kid turns into a bouncy ball, *ghop ghop gop*, Sheru Bhai million dollar quest, impossible cartoon physics)
+ * Generates viral, high-retention 16-second Desi surreal AI Reels:
+ * - "Ayy Halku re!" floating physics & weightless absurdity
+ * - Relatable Indian characters (Auto wale Bhaiya, Ramesh Chaiwala, Sharma ji ka beta, Babloo)
+ * - Authentic Indian settings (Chai tapri, Mumbai Marine Drive, Delhi streets, Indian wedding baraats)
+ * - Viral Hinglish captions & engagement hooks
+ * - ZERO "ghop ghop" or repetitive foreign filler
  */
 
 const fs = require('fs');
@@ -31,7 +31,7 @@ class SurrealStoryEngine {
       try {
         this.memory = JSON.parse(fs.readFileSync(this.memoryFile, 'utf8'));
       } catch (e) {
-        console.warn(`[Surreal Engine] Memory parse error: ${e.message}. Initializing fresh memory.`);
+        console.warn(`[Indian Meme Engine] Memory parse error: ${e.message}. Initializing fresh memory.`);
         this.memory = this.getDefaultMemory();
       }
     } else {
@@ -44,22 +44,22 @@ class SurrealStoryEngine {
     try {
       fs.writeFileSync(this.memoryFile, JSON.stringify(this.memory, null, 2));
     } catch (e) {
-      console.warn(`[Surreal Engine] Could not save memory: ${e.message}`);
+      console.warn(`[Indian Meme Engine] Could not save memory: ${e.message}`);
     }
   }
 
   getDefaultMemory() {
     return {
-      activeSeriesId: 'series_001',
-      lastUploadedPart: 2,           // 1 or 2 (2 means last saga finished, ready for new Part 1)
-      lastUploadedSlot: 'evening',   // 'morning' or 'evening'
+      activeSeriesId: 'series_desi_001',
+      lastUploadedPart: 2,
+      lastUploadedSlot: 'evening',
       lastUploadedAt: new Date().toISOString(),
-      nextEpisodeDue: 'part1',       // 'part1' or 'part2'
+      nextEpisodeDue: 'part1',
       currentStory: {
-        title: 'The Boy Who Turned Into a Bouncy Ball',
-        characters: ['Milo the Bouncy Boy', 'Sheru Bhai'],
-        part1Summary: 'Milo sneezed so hard he turned into a neon bouncy ball bouncing across rooftops!',
-        cliffhanger: 'Milo bounced off a skyscraper straight toward the Grand Canyon!',
+        title: 'Auto Wale Bhaiya Entered Orbit (Ayy Halku Re!)',
+        characters: ['Raju Auto Wala', 'Sharma Ji'],
+        part1Summary: 'Raju put special cutting chai into his CNG auto-rickshaw and it started floating above Mumbai Marine Drive! Ayy Halku re!',
+        cliffhanger: 'The flying auto is heading straight toward the moon while Sharma ji clings to the meter!',
         part1Slot: 'morning',
         part1Timestamp: new Date().toISOString(),
         part2Summary: '',
@@ -69,11 +69,6 @@ class SurrealStoryEngine {
     };
   }
 
-  /**
-   * Intelligently determines what episode is due next based on state memory:
-   * - If last was Part 1 -> Next MUST BE Part 2 (The Finale)
-   * - If last was Part 2 (or none) -> Next MUST BE Part 1 (New Saga Hook)
-   */
   determineNextEpisodeType(currentSlot = 'auto') {
     if (this.memory.lastUploadedPart === 1) {
       return {
@@ -85,13 +80,10 @@ class SurrealStoryEngine {
     return {
       part: 1,
       isPart1: true,
-      reason: `Starting brand new surreal saga for Part 1 (Previous saga completed)`
+      reason: `Starting brand new Indian viral meme saga for Part 1`
     };
   }
 
-  /**
-   * Direct Groq LLM invocation with robust JSON extraction
-   */
   async callGroq(prompt) {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify({
@@ -99,10 +91,14 @@ class SurrealStoryEngine {
         messages: [
           {
             role: 'system',
-            content: `You are the master viral storyteller for "MorphVerse AI" creating hilarious, high-dopamine, surreal 16-second cartoon-transformation short videos for Instagram Reels and YouTube Shorts.
-Themes: Kid sneezes and turns into a bouncy rubber ball / bowling ball, unexpected objects transforming, *ghop ghop gop* sound effects, million-dollar Sheru Bhai quests, cartoon physics, instant dopamine hooks.
-Universal global appeal: No regional slang or niche B2B text.
-Respond with RAW, VALID JSON ONLY. Do not wrap in markdown quotes or preface with any conversational filler.`
+            content: `You are the master viral storyteller for "MorphVerse AI" creating wildly hilarious, high-dopamine Indian meme AI reels ("Ayy Halku re!" trend, Desi surreal comedy, relatable Indian situations) for Instagram Reels.
+Themes:
+- "Ayy Halku re!" trend: everyday Indian things suddenly becoming weightless and floating into the sky (flying auto-rickshaws, cutting chai kettles floating above street tapris, samosas flying like UFOs, buffaloes floating in wedding baraats, supersonic flying chappals, Indian boys drinking sting and floating into space).
+- High relatable Desi comedy: Ramesh Bhai, Sharma ji, Babloo, Auto wale bhaiya, coaching class backbenchers, Mumbai Marine Drive, Delhi metro, local chai stalls with steaming brass kettles.
+- Absolutely NO "ghop ghop" or repetitive foreign gibberish.
+- Hinglish viral captions with witty hooks, emoji punchlines, and trending Indian hashtags (#halkure #desimemes #indianmemes #reelsindia #trendingaudio #aiartindia #foryouindia #bakchodi #desicomedy #viralindiareels).
+- Visual scenes must describe cinematic, ultra-detailed 3D animation in 9:16 vertical ratio with vibrant Indian lighting and cartoon physics.
+Respond with RAW, VALID JSON ONLY. No markdown wrapper.`
           },
           { role: 'user', content: prompt }
         ],
@@ -125,10 +121,7 @@ Respond with RAW, VALID JSON ONLY. Do not wrap in markdown quotes or preface wit
             const parsed = JSON.parse(data);
             if (parsed.choices && parsed.choices.length > 0) {
               const text = parsed.choices[0].message.content.trim();
-              
-              // Robust JSON Extraction (strips backticks, extra headers, reasoning tokens)
               let clean = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-              
               if (!clean.startsWith('{')) {
                 const firstBrace = clean.indexOf('{');
                 const lastBrace = clean.lastIndexOf('}');
@@ -136,14 +129,13 @@ Respond with RAW, VALID JSON ONLY. Do not wrap in markdown quotes or preface wit
                   clean = clean.substring(firstBrace, lastBrace + 1);
                 }
               }
-
               const jsonResult = JSON.parse(clean);
               resolve(jsonResult);
             } else {
-              reject(new Error(`Groq API returned error payload: ${data}`));
+              reject(new Error(`Groq API returned error: ${data}`));
             }
           } catch (err) {
-            reject(new Error(`Failed to parse Groq response as JSON: ${err.message}. Raw preview: ${data.slice(0, 300)}`));
+            reject(new Error(`Failed to parse Groq response: ${err.message}`));
           }
         });
       });
@@ -154,75 +146,64 @@ Respond with RAW, VALID JSON ONLY. Do not wrap in markdown quotes or preface wit
     });
   }
 
-  /**
-   * Generates next episode in sequence, or forces a specific part if requested
-   */
   async generateEpisode(forcedPart = null, currentSlot = 'auto') {
     let targetPart;
-    if (forcedPart === 'part1' || forcedPart === 1) {
-      targetPart = 1;
-    } else if (forcedPart === 'part2' || forcedPart === 2) {
-      targetPart = 2;
-    } else {
-      targetPart = this.determineNextEpisodeType(currentSlot).part;
-    }
+    if (forcedPart === 'part1' || forcedPart === 1) targetPart = 1;
+    else if (forcedPart === 'part2' || forcedPart === 2) targetPart = 2;
+    else targetPart = this.determineNextEpisodeType(currentSlot).part;
 
     const isPart1 = targetPart === 1;
     const slotContext = currentSlot === 'auto'
       ? (new Date().getHours() < 15 ? 'morning' : 'evening')
       : currentSlot;
 
-    // Determine the cliffhanger callout timing based on slot:
-    // If Part 1 is in morning -> Part 2 is "TONIGHT AT 7:30 PM EST"
-    // If Part 1 is in evening -> Part 2 is "TOMORROW MORNING AT 11:30 AM EST"
     const nextCallout = slotContext === 'morning'
-      ? 'Part 2 drops TONIGHT at 7:30 PM EST! 🍿'
-      : 'Part 2 drops TOMORROW MORNING at 11:30 AM EST! 🍿';
+      ? 'Part 2 drops TONIGHT at 7:30 PM! 🍿'
+      : 'Part 2 drops TOMORROW MORNING at 11:30 AM! 🍿';
 
-    console.log(`\n🧠 [Groq Story Brain] Crafting ${isPart1 ? 'PART 1 (The Hook & Cliffhanger)' : 'PART 2 (The Finale Resolution)'}...`);
-    console.log(`   Slot: ${slotContext.toUpperCase()} | Next Episode Target: Part ${targetPart}`);
+    console.log(`\n🧠 [Indian Meme AI Brain] Crafting ${isPart1 ? 'PART 1 (Desi Hook & Cliffhanger)' : 'PART 2 (Desi Finale Climax)'}...`);
 
     let prompt = '';
 
     if (isPart1) {
-      // PART 1: Brand New Saga Creation
-      prompt = `Create a viral, wildly hilarious 16-second AI transformation reel script for PART 1 of a 2-part daily saga.
-Setting current slot: ${slotContext.toUpperCase()}.
-Next slot reminder: ${nextCallout}
+      prompt = `Create a viral Indian meme 16-second AI reel script for PART 1 of a 2-part daily saga.
+Theme: "Ayy Halku re!" floating trend and surreal Desi comedy.
+Examples of themes to pick from:
+1. Auto wale bhaiya puts special cutting chai into his CNG auto-rickshaw and it starts floating like a drone over Mumbai Marine Drive.
+2. Chai tapri wala boils tea with so much swag the entire tea stall and kettle start floating into the clouds ("Ayy Halku re!").
+3. Ramesh eats an ultra-spicy samosa and gains anti-gravity flight over Delhi Gate with neon sparkles.
+4. Desi wedding baraat where the groom's horse suddenly sprouts glowing wings and starts dancing on clouds.
 
-Themes & Elements:
-- A hilarious unexpected transformation (e.g., a kid sneezes and pops into a glowing bouncy rubber ball / neon bowling ball / rocket scooter)
-- Ridiculous cartoon physics, bouncy sound effects, and funny catchphrases (*ghop ghop gop*, *boing boing boing*)
-- Sheru Bhai appears on a million-dollar quest trying to catch or race it with absurd gadgets
-- Ends on a heart-stopping, mind-boggling CLIFFHANGER right at 16 seconds!
+Requirements:
+- Absolutely NO "ghop ghop".
+- High-energy Hinglish voiceover script ending with "${nextCallout}".
+- Ends on a mind-blowing cliffhanger at second 16.
+- 2 distinct visual scenes for Google Veo (0-8s: Setup & floating hook, 8-16s: Escalation & cliffhanger).
 
 Return strictly valid JSON:
 {
-  "title": "Short punchy saga title (e.g. The Boy Who Turned Into a Bouncy Ball)",
+  "title": "Short punchy Indian meme title (e.g., Auto Wale Bhaiya Entered Orbit | Ayy Halku Re!)",
   "part": 1,
-  "characters": ["Main transformed character", "Sheru Bhai"],
-  "hook": "First 3-second visual and spoken hook that stops scrolling instantly",
-  "cliffhanger": "Exact cliffhanger at second 16 that forces viewers to come back for Part 2",
-  "voiceoverScript": "16-second fast-paced narrator voiceover (approx 40-50 words) with funny onomatopoeia (*ghop ghop gop!*), ending with: '${nextCallout}'",
+  "characters": ["Main Indian character", "Supporting character (e.g. Sharma ji, Babloo)"],
+  "hook": "First 3-second visual and spoken Hinglish hook",
+  "cliffhanger": "Exact cliffhanger moment at second 16",
+  "voiceoverScript": "16-second fast-paced Hinglish voiceover with funny Desi commentary, ending with: '${nextCallout}'",
   "visualScenes": [
-    { "sec": "0-4s", "prompt": "Vibrant 9:16 vertical surreal transformation visual", "caption": "ACCIDENTAL TRANSFORMATION 🏀" },
-    { "sec": "4-8s", "prompt": "High speed bouncing/chaos through city/clouds", "caption": "*GHOP GHOP GOP* 🚀" },
-    { "sec": "8-12s", "prompt": "Sheru Bhai chasing with ridiculous million dollar net/umbrella", "caption": "SHERU BHAI ON THE HUNT 💰" },
-    { "sec": "12-16s", "prompt": "Extreme cliffhanger freeze frame moment", "caption": "PT. 2 ${slotContext === 'morning' ? 'TONIGHT @ 7:30 PM!' : 'TOMORROW @ 11:30 AM!'}" }
+    { "sec": "0-8s", "prompt": "Cinematic 3D animation in 9:16 vertical ratio of Indian setting, character with colorful attire, object suddenly floating weightlessly into the air with vibrant neon sparkles and Bollywood dramatic camera zoom, 8k render", "caption": "AYY HALKU RE! 🚀" },
+    { "sec": "8-16s", "prompt": "Cinematic 3D animation in 9:16 vertical ratio of extreme aerial chaos above Indian landmarks, vibrant evening sunset lighting, cliffhanger freeze-frame, 8k render", "caption": "PT. 2 ${slotContext === 'morning' ? 'TONIGHT @ 7:30 PM!' : 'TOMORROW @ 11:30 AM!'}" }
   ],
-  "instagramCaption": "Viral IG caption with emoji hooks, explaining the wild transformation, warning viewers not to miss Part 2, and 20 viral hashtags (#surreal #aiart #transformation #ghopghop #sherubhai #bouncyball #brainrot #viralreels #part1 #cliffhanger)",
-  "soundtrackVibe": "hyper-energy bass boosted cartoon bounce beat"
+  "instagramCaption": "Viral Hinglish caption with funny emoji hooks, asking viewers if they ever experienced this, warning not to miss Part 2, and 20 viral Indian hashtags (#halkure #desimemes #indianmemes #reelsindia #trendingaudio #aiartindia #foryouindia #delhincr #mumbaidiaries #bakchodi #viralindiareels #desicomedy)",
+  "soundtrackVibe": "bhangra bass boosted viral trap beat with dhol"
 }`;
     } else {
-      // PART 2: Resolves Part 1's EXACT Cliffhanger from Persistent Memory
       const prev = this.memory.currentStory || {};
-      const title = prev.title || 'The Kid Who Turned Into a Rubber Ball';
-      const characters = prev.characters || ['Milo the Bouncy Boy', 'Sheru Bhai'];
-      const cliffhanger = prev.cliffhanger || 'Milo is falling into a giant canyon while Sheru Bhai dives with an umbrella!';
-      const part1Summary = prev.part1Summary || 'The boy turned into a bouncing ball and broke the sound barrier.';
+      const title = prev.title || 'Auto Wale Bhaiya Entered Orbit';
+      const characters = prev.characters || ['Raju Auto Wala', 'Sharma Ji'];
+      const cliffhanger = prev.cliffhanger || 'The flying auto is heading straight toward the moon!';
+      const part1Summary = prev.part1Summary || 'The auto rickshaw started floating over Marine Drive.';
 
-      prompt = `Create PART 2 (THE GRAND FINALE) of our viral 16-second AI saga.
-You MUST directly resolve the exact cliffhanger from Part 1 with maximum humor, absurdity, and dopamine!
+      prompt = `Create PART 2 (THE GRAND FINALE) of our viral Indian meme saga.
+Theme: Resolving the "Ayy Halku re!" floating cliffhanger with maximum Desi comedy and absurdity!
 
 PART 1 STORY MEMORY:
 - Title: "${title}"
@@ -231,46 +212,42 @@ PART 1 STORY MEMORY:
 - EXACT CLIFFHANGER TO RESOLVE: "${cliffhanger}"
 
 Requirements:
+- Absolutely NO "ghop ghop".
 - Start voiceover with: "Part 2! In our last episode..."
-- Immediately resolve the cliffhanger using ridiculous cartoon logic (*GHOP GHOP GOP!*, million-dollar trampoline, reverse gravity, confetti explosion)
-- Bring the transformation to a hilarious, satisfying conclusion in 16 seconds
-- End with a call to action asking viewers: "What should transform in tomorrow's saga? Drop it in the comments! 👇"
+- Immediately resolve the cliffhanger using hilarious Desi logic (ISRO intervention, samosa thruster, landing on a giant wedding tent, free jalebi celebration).
+- Bring to a triumphant conclusion in 16 seconds.
+- End with: "Comment below what should float tomorrow! 👇"
 
 Return strictly valid JSON:
 {
   "title": "${title} (Part 2 - The Finale)",
   "part": 2,
   "characters": ${JSON.stringify(characters)},
-  "voiceoverScript": "High energy 16-second voiceover starting with 'Part 2!', resolving '${cliffhanger}', and finishing with a triumphant punchline and call to action",
+  "voiceoverScript": "High energy 16-second Hinglish voiceover starting with 'Part 2!', resolving '${cliffhanger}', and finishing with a triumphant punchline and call to action",
   "visualScenes": [
-    { "sec": "0-4s", "prompt": "Immediate resolution of the cliffhanger in 9:16 vertical neon style", "caption": "PART 2: THE RESOLUTION 💥" },
-    { "sec": "4-8s", "prompt": "Absurd mid-air escalation with *ghop ghop gop* sound effect physics", "caption": "*GHOP GHOP GOP!* ✨" },
-    { "sec": "8-12s", "prompt": "Peak funny climax where the transformation finishes", "caption": "MILLION DOLLAR RESCUE 🍦" },
-    { "sec": "12-16s", "prompt": "Celebration ending freeze-frame", "caption": "WHAT TRANSFORMS TOMORROW? 👇" }
+    { "sec": "0-8s", "prompt": "Cinematic 3D animation in 9:16 vertical ratio resolving the cliffhanger mid-air above Indian city with colorful fireworks and anti-gravity cartoon physics, 8k render", "caption": "PART 2: THE DESI FINALE 💥" },
+    { "sec": "8-16s", "prompt": "Cinematic 3D animation in 9:16 vertical ratio of triumphant landing in a vibrant Indian festival with celebration, marigold garlands, and confetti, 8k render", "caption": "COMMENT WHAT FLOATS NEXT! 👇" }
   ],
-  "instagramCaption": "Viral IG caption celebrating the epic conclusion of the saga, tagging the wild stunts, and asking viewers what crazy thing should transform in tomorrow's episode, with 20 viral hashtags",
-  "soundtrackVibe": "epic orchestral trap victory beat with funny sound effects"
+  "instagramCaption": "Viral Hinglish caption celebrating the epic Desi finale, tagging the crazy stunt, and asking viewers what should float in tomorrow's episode, with 20 viral Indian hashtags (#halkure #desimemes #indianmemes #reelsindia #trendingaudio #aiartindia #foryouindia #delhincr #mumbaidiaries #bakchodi #viralindiareels #desicomedy)",
+  "soundtrackVibe": "epic dhol beats with celebratory brass band"
 }`;
     }
 
     try {
       const storyData = await this.callGroq(prompt);
-
-      // Verify essential fields
       storyData.part = targetPart;
-      storyData.title = storyData.title || (isPart1 ? 'The Absurd Transformation' : `${this.memory.currentStory?.title || 'Transformation'} (Part 2)`);
+      storyData.title = storyData.title || (isPart1 ? 'Auto Wale Bhaiya Entered Orbit | Ayy Halku Re!' : `${this.memory.currentStory?.title || 'Desi Saga'} (Part 2)`);
 
-      // Update and persist memory
       if (isPart1) {
-        this.memory.activeSeriesId = `series_${Date.now()}`;
+        this.memory.activeSeriesId = `series_desi_${Date.now()}`;
         this.memory.lastUploadedPart = 1;
         this.memory.lastUploadedSlot = slotContext;
         this.memory.lastUploadedAt = new Date().toISOString();
         this.memory.nextEpisodeDue = 'part2';
         this.memory.currentStory = {
           title: storyData.title,
-          characters: storyData.characters || ['Transformed Hero', 'Sheru Bhai'],
-          hook: storyData.hook || 'Wait till you see this...',
+          characters: storyData.characters || ['Raju Auto Wala', 'Sharma Ji'],
+          hook: storyData.hook || 'Ayy Halku re!',
           part1Summary: storyData.voiceoverScript,
           cliffhanger: storyData.cliffhanger || 'Wait for Part 2!',
           part1Slot: slotContext,
@@ -286,7 +263,6 @@ Return strictly valid JSON:
         this.memory.currentStory.part2Summary = storyData.voiceoverScript;
         this.memory.currentStory.part2Timestamp = new Date().toISOString();
 
-        // Push to completed series log
         this.memory.completedSeries.unshift({
           id: this.memory.activeSeriesId,
           title: this.memory.currentStory.title,
@@ -294,50 +270,42 @@ Return strictly valid JSON:
           cliffhanger: this.memory.currentStory.cliffhanger,
           finaleSummary: storyData.voiceoverScript
         });
-        // Retain last 50 completed series
         if (this.memory.completedSeries.length > 50) {
           this.memory.completedSeries = this.memory.completedSeries.slice(0, 50);
         }
       }
 
       this.saveMemory();
-      console.log(`✅ [Groq Story Brain] Successfully generated "${storyData.title}" (Part ${storyData.part})`);
-      console.log(`   Memory Updated: nextEpisodeDue = "${this.memory.nextEpisodeDue}"`);
-
+      console.log(`✅ [Indian Meme AI Brain] Generated "${storyData.title}" (Part ${storyData.part})`);
       return storyData;
     } catch (err) {
-      console.warn(`[Groq Story Brain] API issue (${err.message}). Using procedural backup.`);
+      console.warn(`[Indian Meme AI Brain] API issue (${err.message}). Using procedural backup.`);
       return this.generateProceduralEpisode(isPart1, slotContext);
     }
   }
 
-  /**
-   * Procedural offline backup in case of network or API outage
-   */
   generateProceduralEpisode(isPart1, slotContext = 'morning') {
     const nextCallout = slotContext === 'morning'
-      ? 'Part 2 drops TONIGHT at 7:30 PM EST! 🍿'
-      : 'Part 2 drops TOMORROW MORNING at 11:30 AM EST! 🍿';
+      ? 'Part 2 drops TONIGHT at 7:30 PM! 🍿'
+      : 'Part 2 drops TOMORROW MORNING at 11:30 AM! 🍿';
 
     if (isPart1) {
       const story = {
-        title: 'The Boy Who Turned Into a Bouncy Ball',
+        title: 'Auto Wale Bhaiya Entered Orbit | Ayy Halku Re!',
         part: 1,
-        characters: ['Milo the Bouncy Boy', 'Sheru Bhai'],
-        hook: 'He sneezed and instantly turned into a neon basketball!',
-        cliffhanger: 'Milo ricocheted off a skyscraper straight into a black hole portal over the Grand Canyon!',
-        voiceoverScript: `Milo sneezed so hard his molecules rearranged into a neon basketball! *boing boing boing* Now he is bouncing across rooftops at Mach 4! Sheru Bhai spotted him with a million-dollar butterfly net, but Milo bounced straight toward the Grand Canyon! ${nextCallout}`,
+        characters: ['Raju Auto Wala', 'Sharma Ji'],
+        hook: 'Bhai ne auto me CNG ki jagah cutting chai daal di!',
+        cliffhanger: 'Auto sidha cloud 9 cross kar gaya—Sharma ji meter pakad ke chillaye! Will they return?',
+        voiceoverScript: `Bhai ne auto me CNG ki jagah kadak adrak chai daal di! Ayy Halku re! Auto sidha Mumbai Marine Drive chhod ke hawa me udne laga! Sharma ji piche baithe bol rahe meter down karo bhaiya! Lekin auto ab Chandrayaan ke raste pe nikal chuka hai! ${nextCallout}`,
         visualScenes: [
-          { sec: '0-4s', prompt: 'Young boy sneezes and instantly pops into a glowing bouncy rubber ball', caption: 'ACCIDENTAL TRANSFORMATION 🏀' },
-          { sec: '4-8s', prompt: 'Rubber ball bouncing high into clouds over skyscrapers with speed trails', caption: '*GHOP GHOP GOP* 🚀' },
-          { sec: '8-12s', prompt: 'Sheru Bhai chasing the bouncing ball holding a golden net', caption: 'SHERU BHAI ON THE CHASE 💰' },
-          { sec: '12-16s', prompt: 'Ball ricocheting off a canyon cliff into a portal', caption: `PT. 2 ${slotContext === 'morning' ? 'TONIGHT @ 7:30 PM!' : 'TOMORROW @ 11:30 AM!'}` }
+          { sec: '0-8s', prompt: 'Cinematic 3D animation in 9:16 vertical ratio of iconic yellow and green Indian auto-rickshaw floating weightlessly above bustling Mumbai Marine Drive at sunset, neon underglow, driver wearing aviator sunglasses, colorful sparks, Bollywood dramatic camera angle, 8k render', caption: 'AYY HALKU RE! 🚀' },
+          { sec: '8-16s', prompt: 'Cinematic 3D animation in 9:16 vertical ratio of the flying auto-rickshaw breaking through clouds into starry space with Earth in background, freeze frame cliffhanger, 8k render', caption: `PT. 2 ${slotContext === 'morning' ? 'TONIGHT @ 7:30 PM!' : 'TOMORROW @ 11:30 AM!'}` }
         ],
-        instagramCaption: `Bro literally sneezed and turned into a bouncing rubber ball 💀😭 Sheru Bhai is on his tail with a million dollar bounty! Will he survive the canyon drop? ${nextCallout}\n.\n.\n#surrealism #aiart #transformation #ghopghop #sherubhai #bouncyball #memesdaily #reelsviral #part1 #cliffhanger #brainrot #satisfyingvideos`,
-        soundtrackVibe: 'bass-boosted cartoon bounce beat'
+        instagramCaption: `Ayy Halku re! 😂 Auto wale bhaiya ne CNG ki jagah adrak chai daal di 💀 Sharma ji bol rahe meter down karo 😭 Tag that friend who drives like this 👇\n.\n.\n#halkure #desimemes #indianmemes #reelsindia #trendingaudio #aiartindia #foryouindia #delhincr #mumbaidiaries #bakchodi #viralindiareels #desicomedy #autowala`,
+        soundtrackVibe: 'dhol bass boosted trap'
       };
 
-      this.memory.activeSeriesId = `series_${Date.now()}`;
+      this.memory.activeSeriesId = `series_desi_${Date.now()}`;
       this.memory.lastUploadedPart = 1;
       this.memory.lastUploadedSlot = slotContext;
       this.memory.lastUploadedAt = new Date().toISOString();
@@ -357,18 +325,16 @@ Return strictly valid JSON:
       return story;
     } else {
       const story = {
-        title: `${this.memory.currentStory?.title || 'The Bouncy Boy Saga'} (Part 2 - The Finale)`,
+        title: `${this.memory.currentStory?.title || 'Auto Wale Bhaiya'} (Part 2 - The Finale)`,
         part: 2,
-        characters: this.memory.currentStory?.characters || ['Milo the Bouncy Boy', 'Sheru Bhai'],
-        voiceoverScript: 'PART 2! Just as Milo was about to hit terminal velocity, Sheru Bhai deployed the million-dollar golden trampoline! *GHOP GHOP GOP!* Milo rebounded straight into the stratosphere, broke the sound barrier, and safely transformed back into a boy holding an ice cream cone! What should transform in tomorrow morning’s saga? Tell us below!',
+        characters: this.memory.currentStory?.characters || ['Raju Auto Wala', 'Sharma Ji'],
+        voiceoverScript: 'Part 2! Auto stratosphere me pohoch gaya tha aur Sharma ji ki saans phool rahi thi! Tabhi Raju bhaiya ne reverse gear daala aur samosa parachute deploy kar diya! Auto sidha Sharma ji ki terrace pe safe land hua aur Raju bola—sirf 50 rupaye hue! Comment karo kal kya udayein! 👇',
         visualScenes: [
-          { sec: '0-4s', prompt: 'Rubber ball hitting giant golden trampoline at bottom of canyon with shockwave', caption: 'PART 2: THE REBOUND 💥' },
-          { sec: '4-8s', prompt: 'Epic rocket launch rebound shooting into the northern lights', caption: '*GHOP GHOP GOP!* ✨' },
-          { sec: '8-12s', prompt: 'Ball popping with glitter and turning back into a smiling kid', caption: 'MILLION DOLLAR RESCUE 🍦' },
-          { sec: '12-16s', prompt: 'Kid and Sheru Bhai celebrating with ice cream', caption: 'COMMENT WHAT TRANSFORMS NEXT! 👇' }
+          { sec: '0-8s', prompt: 'Cinematic 3D animation in 9:16 vertical ratio of flying auto-rickshaw opening giant colorful parachute with fireworks descent over vibrant Indian city, 8k render', caption: 'PART 2: THE REVERSE DESI DRIFT 💥' },
+          { sec: '8-16s', prompt: 'Cinematic 3D animation in 9:16 vertical ratio of auto landing smoothly on Indian rooftop terrace with chai and samosas, celebrating with confetti, 8k render', caption: 'COMMENT WHAT FLOATS NEXT! 👇' }
         ],
-        instagramCaption: 'THE FINALE IS HERE! 💥 Sheru Bhai actually pulled off the million dollar trampoline catch! 😭 Milo is back to human form with free ice cream! Comment below what should transform tomorrow! 🌀\n.\n.\n#surreal #aiart #sherubhai #transformation #satisfying #finale #viralreels #reelsinstagram #ghopghop #comedyreels',
-        soundtrackVibe: 'epic cinematic victory remix'
+        instagramCaption: 'PART 2 THE FINALE IS LIVE! 💥 Raju bhaiya ne safely land kara diya sirf ₹50 meter pe 😭 Sharma ji abhi bhi shock me hain! Comment below what should float in tomorrow’s saga! 🛸👇\n.\n.\n#halkure #desimemes #indianmemes #reelsindia #trendingaudio #aiartindia #foryouindia #delhincr #mumbaidiaries #bakchodi #viralindiareels #desicomedy #part2',
+        soundtrackVibe: 'celebratory bhangra brass'
       };
 
       this.memory.lastUploadedPart = 2;
@@ -399,15 +365,7 @@ Return strictly valid JSON:
       lastUploadedSlot: this.memory.lastUploadedSlot,
       lastUploadedAt: this.memory.lastUploadedAt,
       nextEpisodeDue: this.memory.nextEpisodeDue,
-      currentStory: {
-        title: this.memory.currentStory?.title || 'None',
-        characters: this.memory.currentStory?.characters || [],
-        hook: this.memory.currentStory?.hook || '',
-        cliffhanger: this.memory.currentStory?.cliffhanger || '',
-        part1Slot: this.memory.currentStory?.part1Slot || '',
-        part1Summary: this.memory.currentStory?.part1Summary || '',
-        part2Summary: this.memory.currentStory?.part2Summary || ''
-      },
+      currentStory: this.memory.currentStory,
       totalCompletedSagas: this.memory.completedSeries?.length || 0,
       recentCompletedSagas: (this.memory.completedSeries || []).slice(0, 5)
     };

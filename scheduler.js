@@ -147,13 +147,13 @@ class SocialBotScheduler {
       console.log(`[Step 1/3] Generating viral surreal script with Groq 120B memory...`);
       const storyData = await surrealStoryEngine.generateEpisode(forcePart);
 
-      // Build ultra-viral Veo 3.1 prompt
-      const scene1 = storyData.visualScenes?.[0]?.prompt || storyData.hook || 'surreal transformation';
+      // Build ultra-viral Indian meme Veo 3.1 prompt ("Ayy Halku re!" style)
+      const scene1 = storyData.visualScenes?.[0]?.prompt || storyData.hook || 'Indian setting with weightless floating auto-rickshaw';
       const scene2 = storyData.visualScenes?.[1]?.prompt || '';
       const isPart1 = storyData.part === 1;
       const veoPrompt = isPart1
-        ? `cinematic 3D animation, photorealistic cartoon physics, 9:16 vertical video of ${scene1}, ${scene2}, high dopamine, colorful neon sparkles, dynamic lighting, 8k render`
-        : `cinematic 3D animation, photorealistic cartoon physics, 9:16 vertical video of ${scene1}, ${scene2}, resolving cliffhanger with explosive colorful trampoline rebound and confetti, vibrant neon lighting, 8k render`;
+        ? `cinematic 3D animation, photorealistic Bollywood dramatic physics, 9:16 vertical video of ${scene1}, ${scene2}, Ayy Halku re viral trend, vibrant Indian festive neon lighting, 8k render`
+        : `cinematic 3D animation, photorealistic Bollywood dramatic physics, 9:16 vertical video of ${scene1}, ${scene2}, resolving floating cliffhanger with grand festive Indian celebration, colorful fireworks and confetti, 8k render`;
 
       const scriptData = {
         ...storyData,

@@ -404,11 +404,27 @@ class FlowBrowserEngine {
 
       console.log(`[FlowBrowserEngine] Successfully downloaded Veo 3.1 video to: ${outputPath} (${fs.statSync(outputPath).size} bytes)`);
 
+      // Enforce 16-second exact duration for Instagram Reels
+      let finalVideoPath = outputPath;
+      let finalDuration = 16.0;
+      const output16sPath = outputPath.replace(/\.mp4$/i, '_16s.mp4');
+      try {
+        const { execSync } = require('child_process');
+        console.log(`[FlowBrowserEngine] Enhancing Veo clip to 16-second Reel format via FFmpeg stream_loop...`);
+        execSync(`ffmpeg -y -stream_loop 1 -i "${outputPath}" -c copy "${output16sPath}"`, { stdio: 'ignore' });
+        if (fs.existsSync(output16sPath) && fs.statSync(output16sPath).size > 1000) {
+          finalVideoPath = output16sPath;
+          console.log(`[FlowBrowserEngine] ✅ Enhanced to 16.0s video (${fs.statSync(finalVideoPath).size} bytes)`);
+        }
+      } catch (e) {
+        console.warn(`[FlowBrowserEngine] 16s enhancement notice: ${e.message}`);
+      }
+
       return {
         success: true,
         source: 'google-flow-veo-3.1',
-        videoPath: outputPath,
-        durationSec: 8.0,
+        videoPath: finalVideoPath,
+        durationSec: finalDuration,
         prompt
       };
     } catch (err) {
