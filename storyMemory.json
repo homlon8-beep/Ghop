@@ -1,22 +1,29 @@
 {
-  "activeSeriesId": "series_1793339182825",
+  "activeSeriesId": "series_1793341684825",
   "lastEpisodeType": "finale",
   "lastPostSlot": "evening",
   "currentStory": {
-    "title": "The Sneezing Kid Who Became a Bouncy Ball",
+    "title": "Sneezed Into a Neon Bouncy Ball!",
     "characters": [
-      "Sneezing Kid / Bouncy Ball",
+      "Timmy the Kid",
       "Sheru Bhai"
     ],
-    "hook": "Kid sneezes—BAM! He becomes a glowing rubber ball!",
-    "part1Summary": "A tiny sneeze erupts, and boom—kid explodes into a neon bouncy ball! *ghop ghop gop* it ricochets across the sky, bouncing off clouds, while Sheru Bhai lunges with his million‑dollar magnet‑net, shouting ‘Catch me if you can!’ *boing boing boing* Part 2 drops TONIGHT at 7:30 PM EST! 🍿",
-    "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai’s net snaps shut—will he catch it?",
+    "hook": "A sneeze erupts, and boom—Timmy explodes into a glowing neon ball!",
+    "part1Summary": "Watch as Timmy’s mighty sneeze *ghop ghop gop* turns him into a neon bouncy ball, bouncing through the city like a comet! Sheru Bhai jumps in with his million‑dollar magnet‑umbrella, racing the glowing orb. Will he snag it? Part 2 drops TONIGHT at 7:30 PM EST! 🍿",
+    "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai lunges, but the net snaps—who will catch it?",
     "part1Slot": "morning",
-    "part1Timestamp": "2026-10-30T05:46:22.825Z",
+    "part1Timestamp": "2026-10-30T06:28:04.825Z",
     "part2Summary": "",
     "part2Timestamp": null
   },
   "completedSeries": [
+    {
+      "id": "series_1793339182825",
+      "title": "The Sneezing Kid Who Became a Bouncy Ball",
+      "completedAt": "2026-10-30T06:18:39.815Z",
+      "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai’s net snaps shut—will he catch it?",
+      "finaleSummary": "Part 2! In our last episode Sheru Bhai’s magnet‑net snapped shut just as the neon ball hurtled toward the glowing portal. *GHOP GHOP GOP!* The net sprouts a million‑dollar trampoline, flips gravity upside‑down, and launches the ball back with a confetti‑burst cannon—transforming the kid into a glitter‑covered superhero rubber duck! He lands with a triumphant *boing* and winks at the camera. What should transform in tomorrow's saga? Drop it in the comments! 👇"
+    },
     {
       "id": "series_1793338577107",
       "title": "The Sneezing Bouncy Ball Blitz",
@@ -32,6 +39,6 @@
   ],
   "lastUploadedPart": 1,
   "lastUploadedSlot": "morning",
-  "lastUploadedAt": "2026-10-30T05:46:22.825Z",
+  "lastUploadedAt": "2026-10-30T06:28:04.825Z",
   "nextEpisodeDue": "part2"
 }

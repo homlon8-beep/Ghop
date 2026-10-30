@@ -566,7 +566,10 @@
 
         <div style="margin-top: 18px; width: 100%;">
           <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;" id="currentVideoTitle">Loading latest video...</div>
-          <div style="font-size: 12px; color: #64748b;" id="currentVideoPath">--</div>
+          <div style="font-size: 12px; color: #64748b; margin-bottom: 12px;" id="currentVideoPath">--</div>
+          <a id="downloadReelBtn" href="#" download class="btn btn-gold" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px 16px; text-decoration: none; font-weight: 700;">
+            📥 Download 1080x1920 Reel MP4
+          </a>
         </div>
       </div>
 
@@ -863,6 +866,11 @@
       player.play().catch(e => console.log('Autoplay deferred:', e));
       document.getElementById('currentVideoTitle').innerText = title || filename;
       document.getElementById('currentVideoPath').innerText = `/api/video/${filename}`;
+      const dlBtn = document.getElementById('downloadReelBtn');
+      if (dlBtn) {
+        dlBtn.href = `/api/video/${filename}`;
+        dlBtn.download = filename;
+      }
     }
 
     async function triggerPart1() {

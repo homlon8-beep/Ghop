@@ -154,7 +154,8 @@ app.get('/api/history', (req, res) => {
     if (fs.existsSync(config.paths.historyFile)) {
       history = JSON.parse(fs.readFileSync(config.paths.historyFile, 'utf8'));
     }
-    res.json({ success: true, history: history.reverse() });
+    // Return newest entries first directly
+    res.json({ success: true, history });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -291,7 +292,10 @@ app.post('/api/sync-profile', async (req, res) => {
 // Stream Video files directly to browser player
 app.get('/api/video/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const filePath = path.join(config.paths.outputDir, filename);
+  let filePath = path.join(config.paths.outputDir, filename);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(config.paths.readyDir, filename);
+  }
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Video not found');

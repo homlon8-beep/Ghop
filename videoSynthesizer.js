@@ -3,6 +3,26 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 
+function getFFmpegPath() {
+  try {
+    const installer = require('@ffmpeg-installer/ffmpeg');
+    if (installer && installer.path && fs.existsSync(installer.path)) {
+      return installer.path;
+    }
+  } catch (e) {}
+  return 'ffmpeg';
+}
+
+function getFFprobePath() {
+  try {
+    const installer = require('@ffprobe-installer/ffprobe');
+    if (installer && installer.path && fs.existsSync(installer.path)) {
+      return installer.path;
+    }
+  } catch (e) {}
+  return 'ffprobe';
+}
+
 class VideoSynthesizer {
   constructor() {
     this.outputDir = config.OUTPUT_DIR;
@@ -223,7 +243,7 @@ class VideoSynthesizer {
     ];
 
     await new Promise((resolve, reject) => {
-      const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      const proc = spawn(getFFmpegPath(), args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let stderr = '';
 
       proc.stderr.on('data', chunk => {
@@ -270,7 +290,7 @@ class VideoSynthesizer {
         coverPath
       ];
 
-      const proc = spawn('ffmpeg', args, { stdio: 'ignore' });
+      const proc = spawn(getFFmpegPath(), args, { stdio: 'ignore' });
       proc.on('close', code => {
         if (code === 0 && fs.existsSync(coverPath)) {
           resolve(coverPath);
