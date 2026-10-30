@@ -119,27 +119,27 @@ class FlowBrowserEngine {
     await promptBox.click();
     await new Promise(r => setTimeout(r, 200));
 
-    // Clear existing text completely via DOM and input event
+    // Clear existing text completely via selection delete (Trusted Types safe)
     await page.evaluate(() => {
-      const box = document.querySelector('[role="textbox"][contenteditable="true"]');
-      if (box) {
-        box.focus();
-        box.innerText = '';
-        box.innerHTML = '';
-        box.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      try {
+        const box = document.querySelector('[role="textbox"][contenteditable="true"]');
+        if (box) {
+          box.focus();
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(box);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          document.execCommand('delete');
+          box.textContent = '';
+        }
+      } catch (e) {}
     });
-    await new Promise(r => setTimeout(r, 300));
+    await page.keyboard.press('Backspace');
+    await new Promise(r => setTimeout(r, 200));
 
-    // Type prompt reliably using execCommand to preserve contenteditable structure
-    await page.evaluate((text) => {
-      const box = document.querySelector('[role="textbox"][contenteditable="true"]');
-      if (box) {
-        box.focus();
-        document.execCommand('insertText', false, text);
-        box.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }, promptText);
+    // Type prompt using Puppeteer native keyboard events (never triggers TrustedHTML CSP)
+    await page.type('[role="textbox"][contenteditable="true"]', promptText, { delay: 10 });
     await new Promise(r => setTimeout(r, 600));
 
     // Submit generation (Press Enter & Click Arrow Button)
