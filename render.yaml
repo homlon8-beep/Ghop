@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ghop-reels-bot
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node --max-old-space-size=512 server.js
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: IG_USERNAME
+        sync: false
+      - key: IG_PASSWORD
+        sync: false
+      - key: IG_SIMULATION_MODE
+        value: "false"
+      - key: FLOW_ROTATION_STRATEGY
+        value: "round-robin"

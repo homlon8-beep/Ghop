@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MorphVerse AI • 24/7 Surreal Reels Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090514;
+      --card-bg: #120b24;
+      --card-border: rgba(192, 132, 252, 0.15);
+      --card-border-glow: rgba(192, 132, 252, 0.35);
+      --purple: #c084fc;
+      --purple-glow: rgba(192, 132, 252, 0.4);
+      --cyan: #38bdf8;
+      --cyan-glow: rgba(56, 189, 248, 0.4);
+      --pink: #f43f5e;
+      --gold: #facc15;
+      --text: #f8fafc;
+      --text-muted: #a1a1aa;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      padding: 24px 20px 60px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient glow orbs */
+    .orb-1 {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(192, 132, 252, 0.16) 0%, rgba(56, 189, 248, 0.08) 50%, transparent 70%);
+      filter: blur(100px);
+      top: -150px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-2 {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, transparent 70%);
+      filter: blur(120px);
+      bottom: -100px;
+      left: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1260px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #a855f7, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 20px var(--purple-glow);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+    }
+    .brand-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .brand-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+    .brand-title span { color: var(--purple); }
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Saga Memory Hero Card */
+    .saga-banner {
+      background: linear-gradient(135deg, rgba(30, 27, 75, 0.8), rgba(88, 28, 135, 0.6));
+      border: 1px solid rgba(192, 132, 252, 0.3);
+      border-radius: 20px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 0 20px rgba(192, 132, 252, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .saga-info {
+      flex: 1;
+      min-width: 280px;
+    }
+    .saga-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .saga-tag {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: rgba(192, 132, 252, 0.2);
+      color: var(--purple);
+      border: 1px solid rgba(192, 132, 252, 0.4);
+    }
+    .saga-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .saga-cliffhanger {
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.5;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border-left: 3px solid var(--gold);
+      margin-top: 10px;
+    }
+    .saga-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Status Grid */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+      border-color: var(--card-border-glow);
+      transform: translateY(-2px);
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .stat-badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .badge-purple { background: rgba(192, 132, 252, 0.15); color: #d8b4fe; border: 1px solid rgba(192, 132, 252, 0.3); }
+    .badge-cyan { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-gold { background: rgba(250, 204, 21, 0.15); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    /* Main Grid: Player on left, Controls on right */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .video-preview-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .reel-container {
+      width: 280px;
+      height: 498px;
+      background: #000;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 2px solid rgba(192, 132, 252, 0.3);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.7), 0 0 25px rgba(192, 132, 252, 0.2);
+      position: relative;
+    }
+    .reel-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .controls-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .btn {
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      font-family: inherit;
+    }
+    .btn-purple {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: #fff;
+      box-shadow: 0 6px 20px var(--purple-glow);
+    }
+    .btn-purple:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
+    }
+    .btn-cyan {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      box-shadow: 0 6px 20px var(--cyan-glow);
+    }
+    .btn-cyan:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(2, 132, 199, 0.6);
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+      color: #000;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(234, 179, 8, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: #fff;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Tabs */
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .tab-btn.active {
+      background: rgba(192, 132, 252, 0.15);
+      color: #fff;
+      border: 1px solid rgba(192, 132, 252, 0.3);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Forms */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #090514;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .form-input:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--purple);
+      box-shadow: 0 0 12px rgba(192, 132, 252, 0.3);
+    }
+    .form-textarea {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    .history-table th, .history-table td {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .history-table th {
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.1);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border-left-color: #fff;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="orb-1"></div>
+  <div class="orb-2"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-avatar">
+          <img src="/avatar.jpg" alt="MorphVerse AI Avatar" onerror="this.innerText='🌀'">
+        </div>
+        <div>
+          <div class="brand-title">MorphVerse<span>.ai</span></div>
+          <div class="brand-subtitle">Autonomous 24/7 Surreal AI Reels Studio • Groq Episodic Brain</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="loadStatus()">🔄 Refresh Status</button>
+        <button class="btn btn-purple" id="btnAutoPost" onclick="triggerAutoPost()">
+          <span>⚡ Auto-Post Next Slot</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Live Saga Continuity Hero Banner -->
+    <div class="saga-banner">
+      <div class="saga-info">
+        <div class="saga-badge-row">
+          <span class="saga-tag" id="sagaSeriesId">SERIES #001</span>
+          <span class="stat-badge badge-gold" id="sagaNextDue">NEXT DUE: PART 1</span>
+        </div>
+        <div class="saga-title" id="sagaTitle">The Boy Who Turned Into a Bouncy Ball</div>
+        <div class="saga-cliffhanger" id="sagaCliffhanger">
+          <strong>Cliffhanger in Memory:</strong> <span id="sagaCliffhangerText">Milo is in freefall over the canyon while Sheru Bhai jumps with an umbrella!</span>
+        </div>
+      </div>
+      <div class="saga-actions">
+        <button class="btn btn-purple" onclick="triggerPart1()">
+          <span>🌀 Generate Part 1 (Hook)</span>
+        </button>
+        <button class="btn btn-cyan" onclick="triggerPart2()">
+          <span>🍿 Generate Part 2 (Finale)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Grid -->
+    <div class="status-grid">
+      <!-- Next Post Countdown -->
+      <div class="stat-card">
+        <div class="stat-label">
+          <span>US Peak Schedule</span>
+          <span class="stat-badge badge-green">2x Daily Active</span>
+        </div>
+        <div class="stat-value" id="nextPostTime">--:--</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" id="nextPostCountdown">
+          11:30 AM (Pt 1) & 7:30 PM (Pt 2) EST
+        </div>
+      </div>
+
+      <!-- Groq AI Brain -->
+      <div class="stat-card">
+        <div class="stat-label">
+          <span>Groq AI Brain</span>
+          <span class="stat-badge badge-purple" id="groqBadge">Connected</span>
+        </div>
+        <div class="stat-value" id="groqModel">openai/gpt-oss-120b</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" id="sagasCount">
+          Total Sagas Completed: --
+        </div>
+      </div>
+
+      <!-- Flow Multi-Account Pool -->
+      <div class="stat-card">
+        <div class="stat-label">
+          <span>Google Labs Flow</span>
+          <span class="stat-badge badge-cyan" id="flowPoolBadge">Active</span>
+        </div>
+        <div class="stat-value" id="flowAccountsCount">0 Accounts</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" id="flowQuotaInfo">
+          Quota remaining: --
+        </div>
+      </div>
+
+      <!-- Instagram Uploader -->
+      <div class="stat-card">
+        <div class="stat-label">
+          <span>Instagram Target</span>
+          <span class="stat-badge badge-green" id="igBadge">Configured</span>
+        </div>
+        <div class="stat-value" id="igHandle">@webifycrafts</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" id="igSessionStatus">
+          Auto staging / checkpoint bypass
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Section: Video Preview & Controls -->
+    <div class="main-grid">
+      <!-- Left: 16-Second Reel Player Preview -->
+      <div class="video-preview-box">
+        <div style="font-size: 15px; font-weight: 800; margin-bottom: 16px; align-self: flex-start; display: flex; align-items: center; gap: 8px;">
+          <span>📱 Latest Generated 16s Reel</span>
+          <span class="stat-badge badge-purple" id="videoResolutionBadge">1080x1920 (9:16)</span>
+        </div>
+        
+        <div class="reel-container">
+          <video id="reelPlayer" controls autoplay loop playsinline>
+            <source src="" type="video/mp4" id="videoSource">
+            Your browser does not support video tag.
+          </video>
+        </div>
+
+        <div style="margin-top: 18px; width: 100%;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;" id="currentVideoTitle">Loading latest video...</div>
+          <div style="font-size: 12px; color: #64748b;" id="currentVideoPath">--</div>
+        </div>
+      </div>
+
+      <!-- Right: Tabbed Controls & Configuration -->
+      <div class="controls-box">
+        <div class="tabs-nav">
+          <button class="tab-btn active" onclick="switchTab('tab-triggers')">⚡ Quick Actions</button>
+          <button class="tab-btn" onclick="switchTab('tab-memory')">🧠 Episodic Memory</button>
+          <button class="tab-btn" onclick="switchTab('tab-profile')">🎨 Profile & Bio</button>
+          <button class="tab-btn" onclick="switchTab('tab-config')">⚙️ Settings</button>
+        </div>
+
+        <!-- TAB 1: QUICK ACTIONS -->
+        <div id="tab-triggers" class="tab-content active">
+          <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">
+            Trigger immediate AI reel generation. The Groq brain remembers active saga state and chooses Part 1 or Part 2 automatically.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn btn-purple" style="padding: 16px;" onclick="triggerPart1()">
+              <span>🌀 Generate Part 1 (Morning Hook & Cliffhanger)</span>
+            </button>
+            <button class="btn btn-cyan" style="padding: 16px;" onclick="triggerPart2()">
+              <span>🍿 Generate Part 2 (Evening Finale Resolution)</span>
+            </button>
+            <button class="btn btn-gold" style="padding: 16px;" onclick="triggerGenerateOnly()">
+              <span>🎬 Generate & Preview 16s Video (No Post)</span>
+            </button>
+          </div>
+
+          <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border);">
+            <div style="font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 6px;">💡 Continuity Rule:</div>
+            <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+              • Morning Slot (11:30 AM EST): Launches Part 1 with a massive hook and cliffhanger.<br>
+              • Evening Slot (7:30 PM EST): Picks up Part 1's exact cliffhanger and delivers the finale!
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: EPISODIC STORY MEMORY -->
+        <div id="tab-memory" class="tab-content">
+          <h4 style="margin-bottom: 12px; font-size: 15px;">Active Story Context in Groq Brain</h4>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 16px; border: 1px solid var(--card-border); font-size: 13px;">
+            <div style="margin-bottom: 8px;"><strong>Title:</strong> <span id="memTitle">--</span></div>
+            <div style="margin-bottom: 8px;"><strong>Characters:</strong> <span id="memCharacters">--</span></div>
+            <div style="margin-bottom: 8px;"><strong>Part 1 Summary:</strong> <span id="memPt1Summary">--</span></div>
+            <div style="margin-bottom: 8px;"><strong>Cliffhanger:</strong> <span id="memCliffhanger" style="color: var(--gold);">--</span></div>
+            <div><strong>Finale Summary:</strong> <span id="memPt2Summary">--</span></div>
+          </div>
+
+          <h4 style="margin-top: 20px; margin-bottom: 12px; font-size: 15px;">Completed Sagas Archive</h4>
+          <div id="completedSagasList" style="font-size: 13px; color: var(--text-muted);">
+            Loading archives...
+          </div>
+        </div>
+
+        <!-- TAB 3: PROFILE SETUP & AVATAR -->
+        <div id="tab-profile" class="tab-content">
+          <h4 style="margin-bottom: 12px; font-size: 15px;">Recommended Instagram Profile Setup</h4>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            Copy & paste these details to make your account look insane and viral:
+          </p>
+
+          <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px; padding: 14px; background: rgba(0,0,0,0.3); border-radius: 12px;">
+            <img src="/avatar.jpg" style="width: 64px; height: 64px; border-radius: 14px; border: 2px solid var(--purple);">
+            <div>
+              <div style="font-weight: 800; font-size: 14px;">Cosmic Neon PFP Generated</div>
+              <a href="/avatar.jpg" download="morphverse_pfp.jpg" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; margin-top: 6px;">📥 Download Profile Picture</a>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Profile Name</label>
+            <input class="form-input" value="MorphVerse AI" readonly onclick="this.select()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input class="form-input" value="morphverse.ai" readonly onclick="this.select()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bio (Optimized for High Follower Conversion)</label>
+            <textarea class="form-textarea" readonly onclick="this.select()" style="min-height: 80px;">🌀 The Surreal Multiverse
+🏀 Where everyday things transform into insanity
+🍿 Daily Sagas: Pt 1 Morning • Pt 2 Evening
+👇 Watch what happens next!</textarea>
+          </div>
+        </div>
+
+        <!-- TAB 4: SETTINGS & ACCOUNTS -->
+        <div id="tab-config" class="tab-content">
+          <div class="form-group">
+            <label class="form-label">Groq API Key (Episodic Brain)</label>
+            <input class="form-input" type="password" id="cfgGroqKey" placeholder="gsk_...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Groq Model</label>
+            <input class="form-input" id="cfgGroqModel" value="openai/gpt-oss-120b">
+          </div>
+
+          <button class="btn btn-purple" onclick="saveGroqConfig()" style="margin-bottom: 24px;">
+            <span>Save Groq Settings</span>
+          </button>
+
+          <h4 style="margin-bottom: 12px; font-size: 15px;">Instagram Credentials / Session Cookie</h4>
+          <div class="form-group">
+            <label class="form-label">Instagram Username</label>
+            <input class="form-input" id="cfgIgUser" value="webifycrafts">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram Password</label>
+            <input class="form-input" type="password" id="cfgIgPass" value="shaurya@12">
+          </div>
+          <button class="btn btn-secondary" onclick="saveIgConfig()">
+            <span>Update Instagram Config</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video History Table -->
+    <div class="card">
+      <div class="card-title">
+        <span>📜 Video Production History</span>
+        <button class="btn btn-secondary" style="margin-left: auto; padding: 6px 12px; font-size: 12px;" onclick="loadHistory()">Refresh</button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Saga Title</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading video history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      toast.style.borderColor = isError ? 'rgba(239, 68, 68, 0.4)' : 'rgba(192, 132, 252, 0.4)';
+      toast.style.background = isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(192, 132, 252, 0.15)';
+      toast.style.color = isError ? '#f87171' : '#d8b4fe';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (!data.success) return;
+
+        // Schedule
+        if (data.scheduler && data.scheduler.schedulerInfo) {
+          const s = data.scheduler.schedulerInfo;
+          document.getElementById('nextPostTime').innerText = s.currentTimeEST || '--';
+          document.getElementById('nextPostCountdown').innerText = `Next: ${s.nextSlot} (in ${s.timeRemaining})`;
+        }
+
+        // Story Memory
+        if (data.story) {
+          const st = data.story;
+          document.getElementById('sagaSeriesId').innerText = (st.activeSeriesId || 'SERIES #001').toUpperCase();
+          document.getElementById('sagaNextDue').innerText = `NEXT DUE: ${(st.nextEpisodeDue || 'part1').toUpperCase()}`;
+          document.getElementById('sagaTitle').innerText = st.currentStory.title || 'The Absurd Transformation';
+          document.getElementById('sagaCliffhangerText').innerText = st.currentStory.cliffhanger || 'None';
+          document.getElementById('sagasCount').innerText = `Total Sagas Completed: ${st.totalCompletedSagas || 0}`;
+
+          // Memory Tab
+          document.getElementById('memTitle').innerText = st.currentStory.title || '--';
+          document.getElementById('memCharacters').innerText = (st.currentStory.characters || []).join(', ') || '--';
+          document.getElementById('memPt1Summary').innerText = st.currentStory.part1Summary || '--';
+          document.getElementById('memCliffhanger').innerText = st.currentStory.cliffhanger || '--';
+          document.getElementById('memPt2Summary').innerText = st.currentStory.part2Summary || '--';
+
+          if (st.recentCompletedSagas && st.recentCompletedSagas.length > 0) {
+            document.getElementById('completedSagasList').innerHTML = st.recentCompletedSagas.map(s => `
+              <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <strong>${s.title}</strong> (${new Date(s.completedAt).toLocaleDateString()})<br>
+                <span style="color: var(--text-muted); font-size: 12px;">${s.finaleSummary || ''}</span>
+              </div>
+            `).join('');
+          } else {
+            document.getElementById('completedSagasList').innerText = 'No completed sagas yet.';
+          }
+        }
+
+        // Flow Accounts
+        if (data.flow) {
+          document.getElementById('flowAccountsCount').innerText = `${data.flow.totalAccounts} Accounts`;
+          document.getElementById('flowQuotaInfo').innerText = `Quota remaining: ${data.flow.totalQuotaRemaining}`;
+        }
+
+        // Instagram
+        if (data.instagram) {
+          document.getElementById('igHandle').innerText = `@${data.instagram.configuredUsername || 'webifycrafts'}`;
+        }
+
+        // Groq Config
+        if (data.groqConfig) {
+          document.getElementById('groqModel').innerText = data.groqConfig.model || 'openai/gpt-oss-120b';
+        }
+
+        loadHistory();
+      } catch (err) {
+        console.error('Status load error:', err);
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const data = await res.json();
+        const tbody = document.getElementById('historyTableBody');
+        if (!data.history || data.history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">No videos produced yet. Click Generate!</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.history.map(item => {
+          const filename = item.videoPath ? item.videoPath.split('/').pop() : '';
+          return `
+            <tr>
+              <td>${new Date(item.timestamp).toLocaleTimeString()}</td>
+              <td><strong>${item.niche || 'Surreal Transformation'}</strong></td>
+              <td><span class="stat-badge ${item.status === 'published' ? 'badge-green' : 'badge-purple'}">${item.status}</span></td>
+              <td>16.0s</td>
+              <td>
+                <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="playVideo('${filename}', '${item.niche || ''}')">
+                  ▶ Play
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Play the most recent video
+        if (data.history[0] && data.history[0].videoPath) {
+          const firstFile = data.history[0].videoPath.split('/').pop();
+          playVideo(firstFile, data.history[0].niche || '');
+        }
+      } catch (err) {
+        console.error('History load error:', err);
+      }
+    }
+
+    function playVideo(filename, title) {
+      if (!filename) return;
+      const player = document.getElementById('reelPlayer');
+      const source = document.getElementById('videoSource');
+      source.src = `/api/video/${filename}`;
+      player.load();
+      player.play().catch(e => console.log('Autoplay deferred:', e));
+      document.getElementById('currentVideoTitle').innerText = title || filename;
+      document.getElementById('currentVideoPath').innerText = `/api/video/${filename}`;
+    }
+
+    async function triggerPart1() {
+      showToast('🌀 Groq is crafting PART 1 (Morning Hook & Cliffhanger)...');
+      try {
+        const res = await fetch('/api/generate-pt1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ upload: false })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Part 1 Created: "${data.result.scriptData.title}"!`);
+          loadStatus();
+        } else {
+          showToast(`Error: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function triggerPart2() {
+      showToast('🍿 Groq is recalling cliffhanger and resolving PART 2 (The Finale)...');
+      try {
+        const res = await fetch('/api/generate-pt2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ upload: false })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Part 2 Finale Created: "${data.result.scriptData.title}"!`);
+          loadStatus();
+        } else {
+          showToast(`Error: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function triggerAutoPost() {
+      showToast('⚡ Running Autonomous Reel Cycle with Episodic Memory...');
+      try {
+        const res = await fetch('/api/post-now', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Autonomous Cycle Completed!`);
+          loadStatus();
+        } else {
+          showToast(`Error: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function triggerGenerateOnly() {
+      showToast('🎬 Synthesizing 16s video with Flow / kinetic engine...');
+      try {
+        const res = await fetch('/api/generate-only', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`🎉 Video Ready!`);
+          loadStatus();
+        } else {
+          showToast(`Error: ${data.error}`, true);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function saveGroqConfig() {
+      const apiKey = document.getElementById('cfgGroqKey').value;
+      const model = document.getElementById('cfgGroqModel').value;
+      try {
+        const res = await fetch('/api/save-groq', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey, model })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ Groq Settings Saved!');
+          loadStatus();
+        }
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    async function saveIgConfig() {
+      const username = document.getElementById('cfgIgUser').value;
+      const password = document.getElementById('cfgIgPass').value;
+      try {
+        const res = await fetch('/api/save-ig', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, simulationMode: false })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ Instagram Config Updated!');
+          loadStatus();
+        }
+      } catch (e) { showToast(e.message, true); }
+    }
+
+    // Auto-load on startup
+    window.addEventListener('DOMContentLoaded', loadStatus);
+  </script>
+</body>
+</html>

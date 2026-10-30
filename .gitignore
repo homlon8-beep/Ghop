@@ -1,0 +1,6 @@
+node_modules/
+.env
+output/
+ready_for_upload/
+ig_session.json
+*.log

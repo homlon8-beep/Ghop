@@ -1,0 +1,30 @@
+{
+  "name": "webify-social-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test_bot.js",
+    "start": "node index.js --daemon",
+    "post": "node index.js --post-now",
+    "generate": "node index.js --generate-only",
+    "status": "node index.js --status"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "instagram-private-api": "^1.46.1",
+    "node-cron": "^4.6.0",
+    "remotion": "^4.0.539"
+  },
+  "optionalDependencies": {
+    "@remotion/core": "^1.0.0-y.46",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

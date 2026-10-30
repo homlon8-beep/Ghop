@@ -1,0 +1,336 @@
+/**
+ * Webify Social Media Management Bot - Express Server & Cloud Dashboard
+ * Runs 24/7 on Render or local port 3002.
+ */
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+
+const { config, updateConfig } = require('./config');
+const flowClient = require('./flowClient');
+const surrealStoryEngine = require('./surrealStoryEngine');
+const scriptGenerator = require('./scriptGenerator');
+const videoSynthesizer = require('./videoSynthesizer');
+const instagramUploader = require('./instagramUploader');
+const scheduler = require('./scheduler');
+
+const app = express();
+const PORT = process.env.PORT || 3002;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ─── BACKGROUND SCHEDULER AUTOSTART ─────────────────────────────
+console.log('🚀 [Webify Social Server] Initializing 24/7 background scheduler...');
+scheduler.startAutonomousSchedule();
+
+// ─── API ENDPOINTS ──────────────────────────────────────────────
+
+// Health check endpoint for Render zero-downtime monitoring
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// System Status & Health Matrix
+app.get('/api/status', (req, res) => {
+  try {
+    const flowStatus = flowClient.getStatus();
+    const igStatus = instagramUploader.getStatus();
+    const schedStatus = scheduler.getStatus();
+    const storyStatus = surrealStoryEngine.getMemoryStatus();
+
+    let history = [];
+    if (fs.existsSync(config.paths.historyFile)) {
+      try {
+        history = JSON.parse(fs.readFileSync(config.paths.historyFile, 'utf8'));
+      } catch (e) {}
+    }
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      flow: flowStatus,
+      instagram: igStatus,
+      scheduler: schedStatus,
+      story: storyStatus,
+      groqConfig: {
+        model: surrealStoryEngine.groqModel,
+        hasKey: Boolean(surrealStoryEngine.groqApiKey)
+      },
+      recentHistory: history.slice(-10).reverse(),
+      outputCount: fs.existsSync(config.paths.outputDir)
+        ? fs.readdirSync(config.paths.outputDir).filter(f => f.endsWith('.mp4')).length
+        : 0,
+      stagedCount: fs.existsSync(config.paths.readyDir)
+        ? fs.readdirSync(config.paths.readyDir).filter(f => f.endsWith('.mp4')).length
+        : 0,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Story Engine Memory Status
+app.get('/api/story-status', (req, res) => {
+  res.json({
+    success: true,
+    story: surrealStoryEngine.getMemoryStatus(),
+    groqConfig: {
+      model: surrealStoryEngine.groqModel,
+      hasKey: Boolean(surrealStoryEngine.groqApiKey)
+    }
+  });
+});
+
+// Trigger Part 1 (Morning Hook & Cliffhanger)
+app.post('/api/generate-pt1', async (req, res) => {
+  try {
+    console.log('⚡ [Dashboard Trigger] Manual PART 1 requested...');
+    const shouldUpload = Boolean(req.body && req.body.upload);
+    const result = await scheduler.executeCycle({
+      slot: 'morning',
+      forcePart: 'part1',
+      upload: shouldUpload
+    });
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Part 1 trigger failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Trigger Part 2 (Evening Finale Resolution from Memory)
+app.post('/api/generate-pt2', async (req, res) => {
+  try {
+    console.log('⚡ [Dashboard Trigger] Manual PART 2 requested...');
+    const shouldUpload = Boolean(req.body && req.body.upload);
+    const result = await scheduler.executeCycle({
+      slot: 'evening',
+      forcePart: 'part2',
+      upload: shouldUpload
+    });
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Part 2 trigger failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Save Groq Settings
+app.post('/api/save-groq', (req, res) => {
+  try {
+    const { apiKey, model } = req.body;
+    if (apiKey) {
+      process.env.GROQ_API_KEY = apiKey.trim();
+      surrealStoryEngine.groqApiKey = apiKey.trim();
+      
+      const envPath = path.join(__dirname, '.env');
+      let env = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+      if (env.includes('GROQ_API_KEY=')) {
+        env = env.replace(/GROQ_API_KEY=.*(\r?\n|$)/g, `GROQ_API_KEY=${apiKey.trim()}\n`);
+      } else {
+        env += `\nGROQ_API_KEY=${apiKey.trim()}`;
+      }
+      fs.writeFileSync(envPath, env.trim() + '\n');
+    }
+    if (model) {
+      process.env.GROQ_MODEL = model.trim();
+      surrealStoryEngine.groqModel = model.trim();
+    }
+    res.json({ success: true, message: 'Groq settings saved successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Full Video History
+app.get('/api/history', (req, res) => {
+  try {
+    let history = [];
+    if (fs.existsSync(config.paths.historyFile)) {
+      history = JSON.parse(fs.readFileSync(config.paths.historyFile, 'utf8'));
+    }
+    res.json({ success: true, history: history.reverse() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Trigger 1-Click Autonomous Reel Cycle (Generate & Publish)
+app.post('/api/post-now', async (req, res) => {
+  try {
+    console.log('⚡ [Dashboard Trigger] Manual POST NOW triggered from web UI...');
+    // Non-blocking trigger or await result
+    const result = await scheduler.executeCycle({ upload: true });
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Post now failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Trigger 1-Click Generate Only (Create & Preview in Browser without posting)
+app.post('/api/generate-only', async (req, res) => {
+  try {
+    console.log('🎬 [Dashboard Trigger] Manual GENERATE ONLY triggered from web UI...');
+    const result = await scheduler.executeCycle({ upload: false });
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Generate only failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Save / Update Google Labs Flow Accounts
+app.post('/api/save-flow-accounts', (req, res) => {
+  try {
+    const { accounts } = req.body;
+    if (!Array.isArray(accounts)) {
+      return res.status(400).json({ success: false, error: 'Expected accounts array' });
+    }
+
+    const payload = {
+      activeAccountIndex: 0,
+      rotationStrategy: 'round-robin',
+      accounts: accounts.map((acc, i) => ({
+        id: acc.id || `flow-acc-${String(i + 1).padStart(2, '0')}`,
+        name: acc.name || `Flow Account ${i + 1}`,
+        email: acc.email || '',
+        bearerToken: acc.bearerToken || '',
+        cookies: acc.cookies || '',
+        sessionToken: acc.sessionToken || '',
+        quotaRemaining: Number(acc.quotaRemaining) || 50,
+        status: 'active'
+      }))
+    };
+
+    fs.writeFileSync(config.paths.flowAccountsFile, JSON.stringify(payload, null, 2));
+    flowClient.reloadAccounts();
+
+    console.log(`✅ [Flow Config] Saved ${payload.accounts.length} Flow accounts successfully.`);
+    res.json({ success: true, message: `Saved ${payload.accounts.length} Flow accounts.` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Save / Update Instagram Credentials
+app.post('/api/save-ig', async (req, res) => {
+  try {
+    const { username, password, simulationMode } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username and password required' });
+    }
+
+    const igConfig = {
+      username: username.trim(),
+      password: password.trim(),
+      simulationMode: Boolean(simulationMode),
+      updatedAt: new Date().toISOString()
+    };
+
+    fs.writeFileSync(path.join(__dirname, 'ig_config.json'), JSON.stringify(igConfig, null, 2));
+
+    // Update .env file
+    const envPath = path.join(__dirname, '.env');
+    let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+    
+    // Replace or append
+    if (envContent.includes('IG_USERNAME=')) {
+      envContent = envContent.replace(/IG_USERNAME=.*(\r?\n|$)/g, `IG_USERNAME=${igConfig.username}\n`);
+    } else {
+      envContent += `\nIG_USERNAME=${igConfig.username}`;
+    }
+    
+    if (envContent.includes('IG_PASSWORD=')) {
+      envContent = envContent.replace(/IG_PASSWORD=.*(\r?\n|$)/g, `IG_PASSWORD=${igConfig.password}\n`);
+    } else {
+      envContent += `\nIG_PASSWORD=${igConfig.password}`;
+    }
+
+    if (envContent.includes('IG_SIMULATION_MODE=')) {
+      envContent = envContent.replace(/IG_SIMULATION_MODE=.*(\r?\n|$)/g, `IG_SIMULATION_MODE=${igConfig.simulationMode}\n`);
+    } else {
+      envContent += `\nIG_SIMULATION_MODE=${igConfig.simulationMode}`;
+    }
+
+    fs.writeFileSync(envPath, envContent.trim() + '\n');
+
+    // Update runtime config
+    process.env.IG_USERNAME = igConfig.username;
+    process.env.IG_PASSWORD = igConfig.password;
+    process.env.IG_SIMULATION_MODE = String(igConfig.simulationMode);
+
+    console.log(`✅ [IG Config] Updated credentials for @${igConfig.username}`);
+    res.json({ success: true, message: `Instagram credentials saved for @${igConfig.username}` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Stream Video files directly to browser player
+app.get('/api/video/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(config.paths.outputDir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Video not found');
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(filePath, { start, end });
+    const head = {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': 'video/mp4',
+    };
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      'Content-Length': fileSize,
+      'Content-Type': 'video/mp4',
+    };
+    res.writeHead(200, head);
+    fs.createReadStream(filePath).pipe(res);
+  }
+});
+
+// Stream Cover images directly to browser
+app.get('/api/cover/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(config.paths.outputDir, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Cover image not found');
+  }
+
+  res.setHeader('Content-Type', 'image/jpeg');
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// Catch-all to serve index.html for dashboard SPA
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n======================================================`);
+  console.log(`🚀 [MorphVerse AI Dashboard] Running live at:`);
+  console.log(`👉 http://localhost:${PORT}`);
+  console.log(`📱 Cloud / Local IP: http://0.0.0.0:${PORT}`);
+  console.log(`======================================================\n`);
+});

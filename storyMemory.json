@@ -1,0 +1,37 @@
+{
+  "activeSeriesId": "series_1793339182825",
+  "lastEpisodeType": "finale",
+  "lastPostSlot": "evening",
+  "currentStory": {
+    "title": "The Sneezing Kid Who Became a Bouncy Ball",
+    "characters": [
+      "Sneezing Kid / Bouncy Ball",
+      "Sheru Bhai"
+    ],
+    "hook": "Kid sneezes—BAM! He becomes a glowing rubber ball!",
+    "part1Summary": "A tiny sneeze erupts, and boom—kid explodes into a neon bouncy ball! *ghop ghop gop* it ricochets across the sky, bouncing off clouds, while Sheru Bhai lunges with his million‑dollar magnet‑net, shouting ‘Catch me if you can!’ *boing boing boing* Part 2 drops TONIGHT at 7:30 PM EST! 🍿",
+    "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai’s net snaps shut—will he catch it?",
+    "part1Slot": "morning",
+    "part1Timestamp": "2026-10-30T05:46:22.825Z",
+    "part2Summary": "",
+    "part2Timestamp": null
+  },
+  "completedSeries": [
+    {
+      "id": "series_1793338577107",
+      "title": "The Sneezing Bouncy Ball Blitz",
+      "completedAt": "2026-10-30T05:36:19.216Z",
+      "cliffhanger": "Sheru Bhai lunges, but the ball bursts into a swirling portal—what's on the other side? Find out tomorrow!",
+      "finaleSummary": "Part 2! In our last episode Sheru Bhai lunged, but the neon ball burst into a swirling portal—*GHOP GHOP GOP!*—and out popped a million‑dollar trampoline that flung Timmy into reverse gravity orbit! He spins like a disco pizza, lands on a candy‑cloud, and poof! Transforms back into a giggling kid‑ball hybrid holding a glittery jackpot trophy. Sheru Bhai screams, \"My magnet‑net just turned into a confetti cannon!\" End scene with a triumphant shout: What should transform in tomorrow's saga? Drop it in the comments! 👇"
+    },
+    {
+      "id": "series_001",
+      "title": "The Boy Who Turned Into a Bouncy Ball",
+      "completedAt": "2026-10-30T05:30:22.562Z"
+    }
+  ],
+  "lastUploadedPart": 1,
+  "lastUploadedSlot": "morning",
+  "lastUploadedAt": "2026-10-30T05:46:22.825Z",
+  "nextEpisodeDue": "part2"
+}

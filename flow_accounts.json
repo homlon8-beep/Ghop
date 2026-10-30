@@ -1,0 +1,40 @@
+{
+  "activeAccountIndex": 1,
+  "rotationStrategy": "round-robin",
+  "accounts": [
+    {
+      "id": "flow-acc-01",
+      "name": "Flow Main Account (Google Labs)",
+      "email": "owner@webify.io",
+      "bearerToken": "ya29.a0AfH6SMD_FLOW_TOKEN_SAMPLE_1",
+      "cookies": "SEARCH_SAMESITE=CgQIlKIB; _ga=GA1.1.1113698079.1793336718; SID=g.a000EQm8uoQM6s8fwGJ7ecT0LdhayBE-l6qy9QmtG77YgzQ526radKDm9ztvOgsFxvFTJZPazAACgYKAc4SARcSFQHGX2Mibv09sc6O2sOnnJMh6hCGmRoVAUF8yKrKvAhOroh9nYcxBttwKpKJ0076; APISID=Ez33Im8Pf63qt6CS/A1sdu7t7yN7hJPgFX; SAPISID=kGWjN66Hb6n-WwcE/A4wg6K67C8czzqJyZ; __Secure-1PAPISID=kGWjN66Hb6n-WwcE/A4wg6K67C8czzqJyZ; __Secure-3PAPISID=kGWjN66Hb6n-WwcE/A4wg6K67C8czzqJyZ; _ga_X2GNH8R5NS=GS2.1.s1793336718$o1$g1$t1793337051$j58$l0$h66694297; SIDCC=APD_SKEZatxGXyhpqs8ZKQ2XNeH_meN5C9JWbmESTDU73GgWCh2vqf0FQdgKwpF8SrjEOMtNoQ",
+      "sessionToken": "session_tok_abc123",
+      "endpoint": "https://labs.google/fx/api/flow",
+      "projectId": "webify-flow-prod-1",
+      "dailyQuota": 50,
+      "quotaRemaining": 100,
+      "totalGenerated": 0,
+      "lastUsed": null,
+      "status": "active",
+      "rateLimitedUntil": null,
+      "notes": "Primary Google Labs Veo generation account"
+    },
+    {
+      "id": "flow-acc-02",
+      "name": "Flow Secondary Account (Backup Pool)",
+      "email": "growth@webify.io",
+      "bearerToken": "ya29.a0AfH6SMD_FLOW_TOKEN_SAMPLE_2",
+      "cookies": "SID=sample_sid_2; HSID=sample_hsid_2; __Secure-1PSID=sample_psid_2",
+      "sessionToken": "session_tok_def456",
+      "endpoint": "https://labs.google/fx/api/flow",
+      "projectId": "webify-flow-prod-2",
+      "dailyQuota": 50,
+      "quotaRemaining": 50,
+      "totalGenerated": 0,
+      "lastUsed": null,
+      "status": "active",
+      "rateLimitedUntil": null,
+      "notes": "Secondary Google Labs Veo backup account for quota exhaustion"
+    }
+  ]
+}
