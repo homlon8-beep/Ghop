@@ -191,7 +191,99 @@ app.post('/api/generate-only', async (req, res) => {
   }
 });
 
-// Test Flow Browser Engine Directly
+let activeFlowJob = null;
+const flowLogs = [];
+
+// Intercept console.log to keep rolling logs
+const origLog = console.log;
+console.log = function(...args) {
+  const line = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+  if (line.includes('[Flow') || line.includes('[IG') || line.includes('Veo')) {
+    flowLogs.push(`[${new Date().toISOString()}] ${line}`);
+    if (flowLogs.length > 200) flowLogs.shift();
+  }
+  origLog.apply(console, args);
+};
+
+// Async background generator (non-blocking)
+app.all('/api/start-veo-generation', async (req, res) => {
+  if (activeFlowJob && activeFlowJob.status === 'running') {
+    return res.json({ success: true, message: 'Generation already running', job: activeFlowJob });
+  }
+
+  const prompt = (req.body && req.body.prompt) || req.query.prompt || 'a glowing neon rubber ball bouncing off city rooftops with colorful sparkles, 3d cartoon physics, 9:16 vertical video';
+  
+  activeFlowJob = {
+    id: `job_${Date.now()}`,
+    prompt,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+    result: null,
+    igResult: null,
+    error: null
+  };
+
+  res.json({ success: true, message: 'Flow Veo 3.1 generation started in background', job: activeFlowJob });
+
+  // Run asynchronously without blocking HTTP
+  (async () => {
+    try {
+      console.log(`[Flow] Starting background Veo 3.1 generation for job: ${activeFlowJob.id}`);
+      const flowBrowserEngine = require('./flowBrowserEngine');
+      const result = await flowBrowserEngine.generateVeoVideo(prompt);
+      activeFlowJob.status = 'generated';
+      activeFlowJob.result = result;
+
+      // Auto-publish to Instagram
+      console.log('[Flow] Auto-publishing to Instagram @feticid...');
+      const instagramUploader = require('./instagramUploader');
+      const caption = `When the neon orb breaches city airspace... ✨🏙️ #MorphVerse #Veo3 #AIAnimation #SurrealCinema #GhopGhop`;
+      const igResult = await instagramUploader.publishViaWebAPI(result.videoPath, caption);
+      activeFlowJob.status = 'completed';
+      activeFlowJob.igResult = igResult;
+      console.log('[Flow] Published successfully to Instagram:', JSON.stringify(igResult));
+    } catch (err) {
+      console.error('[Flow] Background generation error:', err.message);
+      activeFlowJob.status = 'failed';
+      activeFlowJob.error = err.message;
+    }
+  })();
+});
+
+// Flow job status and logs
+app.get('/api/flow-job-status', (req, res) => {
+  res.json({
+    job: activeFlowJob,
+    logs: flowLogs.slice(-60)
+  });
+});
+
+// View Flow debug screenshot
+app.get('/api/flow-debug-screenshot', (req, res) => {
+  const p = path.join(config.OUTPUT_DIR, 'flow_debug_screenshot.png');
+  if (fs.existsSync(p)) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(p);
+  } else {
+    res.status(404).send('No debug screenshot found');
+  }
+});
+
+// Serve generated video directly
+app.get('/api/latest-video', (req, res) => {
+  if (activeFlowJob && activeFlowJob.result && activeFlowJob.result.videoPath && fs.existsSync(activeFlowJob.result.videoPath)) {
+    return res.sendFile(activeFlowJob.result.videoPath);
+  }
+  // Check output directory for latest .mp4
+  const files = fs.readdirSync(config.OUTPUT_DIR).filter(f => f.endsWith('.mp4'));
+  if (files.length > 0) {
+    const latest = files.sort((a, b) => fs.statSync(path.join(config.OUTPUT_DIR, b)).mtime - fs.statSync(path.join(config.OUTPUT_DIR, a)).mtime)[0];
+    return res.sendFile(path.join(config.OUTPUT_DIR, latest));
+  }
+  res.status(404).send('No video generated yet');
+});
+
+// Test Flow Browser Engine Directly (Synchronous with long timeout)
 app.get('/api/test-flow-direct', async (req, res) => {
   const logs = [];
   function log(...args) {
@@ -223,16 +315,6 @@ app.get('/api/test-flow-direct', async (req, res) => {
   } catch (err) {
     log('❌ Generation error:', err.message);
     res.status(500).json({ success: false, logs, error: err.message, stack: err.stack });
-  }
-});
-
-// View Flow debug screenshot
-app.get('/api/flow-debug-screenshot', (req, res) => {
-  const p = path.join(config.OUTPUT_DIR, 'flow_debug_screenshot.png');
-  if (fs.existsSync(p)) {
-    res.sendFile(p);
-  } else {
-    res.status(404).send('No debug screenshot found');
   }
 });
 

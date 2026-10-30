@@ -252,15 +252,23 @@ class FlowBrowserEngine {
       });
 
       console.log(`[FlowBrowserEngine] Submission triggered (submitBtnClicked: ${submitted}). Waiting for generation pipeline...`);
+      await new Promise(r => setTimeout(r, 2000));
+      try { await page.screenshot({ path: screenshotPath }); } catch (e) {}
 
       // 6. Monitor generation output (poll for video src or download link)
-      console.log(`[FlowBrowserEngine] Polling Flow Veo 3.1 generation output (up to 240s)...`);
+      console.log(`[FlowBrowserEngine] Polling Flow Veo 3.1 generation output (up to 300s)...`);
 
       let videoInfo = null;
       const startTime = Date.now();
-      const maxWaitMs = 240000;
+      const maxWaitMs = 300000;
+      let loopCount = 0;
 
       while (Date.now() - startTime < maxWaitMs) {
+        loopCount++;
+        if (loopCount % 3 === 0) {
+          try { await page.screenshot({ path: screenshotPath }); } catch (e) {}
+        }
+
         const progressInfo = await page.evaluate(() => {
           const texts = [...document.querySelectorAll('div, span, p')].map(e => e.textContent || '');
           const match = texts.find(t => /\b(\d+%\s*complete|generating|creating|rendering)\b/i.test(t));
@@ -272,14 +280,16 @@ class FlowBrowserEngine {
         }
 
         const found = await page.evaluate(() => {
+          // 1. Check for standard video elements
           const vids = [...document.querySelectorAll('video')];
           for (const v of vids) {
-            const src = v.currentSrc || v.src;
+            const src = v.currentSrc || v.src || (v.querySelector('source') ? v.querySelector('source').src : null);
             if (src && src.length > 10) {
               return { type: src.startsWith('blob:') ? 'blob' : 'url', url: src };
             }
           }
 
+          // 2. Check for download buttons or menu links
           const links = [...document.querySelectorAll('a[download], a[href*="media"], a[href*="video"]')];
           for (const l of links) {
             if (l.href) return { type: 'url', url: l.href };
@@ -311,7 +321,7 @@ class FlowBrowserEngine {
 
       if (!videoInfo) {
         await page.screenshot({ path: screenshotPath });
-        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (240s). Screenshot captured.');
+        throw new Error('Timed out waiting for Flow Veo 3.1 generation output (300s). Screenshot captured.');
       }
 
       console.log(`[FlowBrowserEngine] ✅ Veo 3.1 Video located (${videoInfo.type}): ${videoInfo.url.slice(0, 80)}...`);
