@@ -109,11 +109,11 @@ class InstagramUploader {
     }
 
     if (!info) {
-      console.log(`[InstagramUploader] Video Specs defaulted to 1080x1920 (9:16 vertical), 16.0s H.264/AAC`);
+      console.log(`[InstagramUploader] Video Specs defaulted to 720x1280 (9:16 vertical), 16.0s H.264/AAC`);
       return {
         isValid: true,
-        width: 1080,
-        height: 1920,
+        width: 720,
+        height: 1280,
         duration: 16.0,
         isVertical: true,
         videoCodec: 'h264',
@@ -125,8 +125,8 @@ class InstagramUploader {
     const videoStream = (info.streams || []).find(s => s.codec_name === 'h264' || s.width);
     const audioStream = (info.streams || []).find(s => s.codec_name === 'aac' || s.codec_name === 'mp3');
 
-    const width = videoStream ? videoStream.width : 1080;
-    const height = videoStream ? videoStream.height : 1920;
+    const width = videoStream ? videoStream.width : 720;
+    const height = videoStream ? videoStream.height : 1280;
     const aspectRatio = width / height;
 
     console.log(`[InstagramUploader] Video Specs Verified -> ${width}x${height} (ratio: ${aspectRatio.toFixed(3)}), ${duration.toFixed(1)}s, Video: ${videoStream ? videoStream.codec_name : 'h264'}, Audio: ${audioStream ? audioStream.codec_name : 'aac'}`);
@@ -326,8 +326,8 @@ class InstagramUploader {
     console.log(`[InstagramUploader] 🚀 Publishing Reel via verified Web API to @feticid (Upload ID: ${uploadId})...`);
 
     // Probe exact specs to prevent Instagram transcode distortion/pixel tearing
-    let actualWidth = 1080;
-    let actualHeight = 1920;
+    let actualWidth = 720;
+    let actualHeight = 1280;
     let actualDurationMs = 16000;
     try {
       const specs = this.validateVideoForReels(videoPath);

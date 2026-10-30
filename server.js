@@ -243,7 +243,7 @@ app.all('/api/start-veo-generation', async (req, res) => {
       // Auto-publish to Instagram
       console.log('[Flow] Auto-publishing to Instagram @feticid...');
       const instagramUploader = require('./instagramUploader');
-      const caption = `When the neon orb breaches city airspace... ✨🏙️ #MorphVerse #Veo3 #AIAnimation #SurrealCinema #GhopGhop`;
+      const caption = `When the chai tapri ascends into the stratosphere... ☕🚀 #MorphVerse #Veo3 #AIAnimation #SurrealCinema #NuclearBombReee`;
       const igResult = await instagramUploader.publishViaWebAPI(result.videoPath, caption);
       activeFlowJob.status = 'completed';
       activeFlowJob.igResult = igResult;
@@ -356,7 +356,7 @@ app.get('/api/test-flow-direct', async (req, res) => {
     if (shouldUpload && result.videoPath && fs.existsSync(result.videoPath)) {
       log('📤 Auto-publishing authentic Veo 3.1 Reel to Instagram @feticid...');
       const instagramUploader = require('./instagramUploader');
-      const caption = `When the neon orb breaches city airspace... ✨🏙️ #MorphVerse #Veo3 #AIAnimation #SurrealCinema #GhopGhop`;
+      const caption = `When the chai tapri ascends into the stratosphere... ☕🚀 #MorphVerse #Veo3 #AIAnimation #SurrealCinema #NuclearBombReee`;
       igResult = await instagramUploader.publishViaWebAPI(result.videoPath, caption);
       log('Instagram publish result:', igResult);
     }

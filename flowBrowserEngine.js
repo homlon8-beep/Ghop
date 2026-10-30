@@ -103,19 +103,43 @@ class FlowBrowserEngine {
     console.log(`\n[FlowBrowserEngine] 🎬 --- Generating Shot ${shotNum} in Veo 3.1 ---`);
     console.log(`   Prompt: "${promptText.slice(0, 110)}..."`);
 
-    // Type prompt into contenteditable div
+    // Dismiss any active modals/overlays from previous shot
+    try {
+      await page.keyboard.press('Escape');
+      await new Promise(r => setTimeout(r, 400));
+      await page.keyboard.press('Escape');
+      await new Promise(r => setTimeout(r, 400));
+    } catch (e) {}
+
+    // Find and focus the prompt textbox
     const promptBox = await page.$('[role="textbox"][contenteditable="true"]');
     if (!promptBox) {
       throw new Error(`Prompt textbox not found for shot ${shotNum}`);
     }
     await promptBox.click();
-    await page.keyboard.down('Control');
-    await page.keyboard.press('A');
-    await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
+    await new Promise(r => setTimeout(r, 200));
+
+    // Clear existing text completely via DOM and input event
+    await page.evaluate(() => {
+      const box = document.querySelector('[role="textbox"][contenteditable="true"]');
+      if (box) {
+        box.focus();
+        box.innerText = '';
+        box.innerHTML = '';
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
     await new Promise(r => setTimeout(r, 300));
 
-    await page.type('[role="textbox"][contenteditable="true"]', promptText, { delay: 10 });
+    // Type prompt reliably using execCommand to preserve contenteditable structure
+    await page.evaluate((text) => {
+      const box = document.querySelector('[role="textbox"][contenteditable="true"]');
+      if (box) {
+        box.focus();
+        document.execCommand('insertText', false, text);
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }, promptText);
     await new Promise(r => setTimeout(r, 600));
 
     // Submit generation (Press Enter & Click Arrow Button)
@@ -141,9 +165,9 @@ class FlowBrowserEngine {
       }
     });
 
-    // Baseline count of known video URLs before this shot finishes
-    const initialUrlCount = capturedUrls.length;
-    console.log(`[FlowBrowserEngine] Polling Veo 3.1 output for Shot ${shotNum} (up to 240s)...`);
+    // Baseline of existing URLs so we only pick URLs arriving strictly for this shot
+    const knownUrls = new Set(capturedUrls);
+    console.log(`[FlowBrowserEngine] Polling Veo 3.1 output for Shot ${shotNum} (known URLs: ${knownUrls.size})...`);
 
     const startTime = Date.now();
     const maxWaitMs = 240000;
@@ -155,8 +179,9 @@ class FlowBrowserEngine {
       await new Promise(r => setTimeout(r, 3500));
 
       // 1. Check if a new video URL was captured via network
-      if (capturedUrls.length > initialUrlCount) {
-        videoUrl = capturedUrls[capturedUrls.length - 1];
+      const newCaptured = capturedUrls.find(u => !knownUrls.has(u));
+      if (newCaptured) {
+        videoUrl = newCaptured;
         console.log(`[FlowBrowserEngine] Detected new video stream URL for Shot ${shotNum}: ${videoUrl.slice(0, 80)}`);
         break;
       }
@@ -182,8 +207,9 @@ class FlowBrowserEngine {
         return null;
       });
 
-      if (domVideoUrl && !capturedUrls.slice(0, initialUrlCount).includes(domVideoUrl)) {
+      if (domVideoUrl && !knownUrls.has(domVideoUrl)) {
         videoUrl = domVideoUrl;
+        console.log(`[FlowBrowserEngine] Detected new DOM video URL for Shot ${shotNum}: ${videoUrl.slice(0, 80)}`);
         break;
       }
     }
@@ -341,15 +367,12 @@ class FlowBrowserEngine {
       // 1. Generate Shot 1 (0-8s Setup & Hook)
       const shot1Path = await this.submitPromptAndPollVideo(page, shot1Prompt, 1, capturedUrls, screenshotPath);
 
-      // 2. Generate Shot 2 (8-16s Climax & Twist) if specified
+      // 2. Generate Shot 2 (8-16s Climax & Escalation) if specified
       let shot2Path = null;
       if (shot2Prompt) {
-        try {
-          await new Promise(r => setTimeout(r, 2000));
-          shot2Path = await this.submitPromptAndPollVideo(page, shot2Prompt, 2, capturedUrls, screenshotPath);
-        } catch (shot2Err) {
-          console.warn(`[FlowBrowserEngine] Shot 2 generation issue (${shot2Err.message}). Proceeding with Shot 1 mastering.`);
-        }
+        console.log(`[FlowBrowserEngine] Preparing Shot 2 generation...`);
+        await new Promise(r => setTimeout(r, 2000));
+        shot2Path = await this.submitPromptAndPollVideo(page, shot2Prompt, 2, capturedUrls, screenshotPath);
       }
 
       // 3. Close browser FIRST to free container RAM before running FFmpeg
@@ -358,36 +381,37 @@ class FlowBrowserEngine {
         console.log(`[FlowBrowserEngine] Closed browser to free container memory before mastering.`);
       } catch (e) {}
 
-      // 4. Master into Crystal-Clear 1080x1920 Full HD (16.0s exact, bicubic upscale, 30fps)
-      console.log(`\n[FlowBrowserEngine] 🎛️ Mastering final 16-second Reel in Full HD 1080x1920 with FFmpeg...`);
+      // 4. Instant Lossless Concat Demuxer (True 16s Narrative, No Looping, 0% CPU)
+      console.log(`\n[FlowBrowserEngine] 🎛️ Finalizing 16-second Reel with FFmpeg...`);
       const finalOutputPath = path.join(this.outputDir, `veo_reel_master_${Date.now()}.mp4`);
 
       if (shot2Path && fs.existsSync(shot2Path)) {
-        // True 2-Shot Narrative Concatenation (Shot 1 + Shot 2 = 16s exact, NO LOOPING)
-        console.log(`[FlowBrowserEngine] 🎬 Concatenating Shot 1 + Shot 2 into true 16-second narrative film!`);
-        const concatCmd = `ffmpeg -y -i "${shot1Path}" -i "${shot2Path}" -filter_complex "[0:v][1:v]concat=n=2:v=1[cv];[cv]scale=1080:1920:flags=bicubic,fps=30[outv]" -map "[outv]" -c:v libx264 -preset veryfast -crf 20 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 8M -maxrate 12M -bufsize 16M -g 60 -movflags +faststart "${finalOutputPath}"`;
-        execSync(concatCmd, { stdio: 'ignore' });
+        console.log(`[FlowBrowserEngine] 🎬 Concatenating Shot 1 + Shot 2 into true 16-second narrative film (NO LOOPING, Lossless Copy)...`);
+        const listPath = path.join(this.outputDir, `concat_${Date.now()}.txt`);
+        fs.writeFileSync(listPath, `file '${shot1Path}'\nfile '${shot2Path}'\n`);
+        const concatCmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy -movflags +faststart "${finalOutputPath}"`;
+        execSync(concatCmd);
+        try { fs.unlinkSync(listPath); } catch (e) {}
       } else {
-        // Single Shot Mastered to 1080x1920 with high-bitrate stream-loop to guarantee 16s
-        console.log(`[FlowBrowserEngine] 🎬 Mastering Shot 1 into 1080x1920 Full HD Reel...`);
-        const singleCmd = `ffmpeg -y -stream_loop 1 -i "${shot1Path}" -vf "scale=1080:1920:flags=bicubic,fps=30" -c:v libx264 -preset veryfast -crf 20 -profile:v high -level 4.2 -pix_fmt yuv420p -b:v 8M -maxrate 12M -bufsize 16M -g 60 -movflags +faststart "${finalOutputPath}"`;
-        execSync(singleCmd, { stdio: 'ignore' });
+        console.log(`[FlowBrowserEngine] 🎬 Finalizing single shot Reel...`);
+        const singleCmd = `ffmpeg -y -i "${shot1Path}" -c copy -movflags +faststart "${finalOutputPath}"`;
+        execSync(singleCmd);
       }
 
       if (!fs.existsSync(finalOutputPath) || fs.statSync(finalOutputPath).size < 1000) {
-        throw new Error('FFmpeg mastering failed to produce valid 1080x1920 video');
+        throw new Error('FFmpeg mastering failed to produce valid video');
       }
 
       const finalSize = fs.statSync(finalOutputPath).size;
-      console.log(`[FlowBrowserEngine] 🎉 Mastered HD Reel Ready: ${finalOutputPath} (${finalSize} bytes, 1080x1920 @ 30fps)`);
+      console.log(`[FlowBrowserEngine] 🎉 Mastered Reel Ready: ${finalOutputPath} (${finalSize} bytes, Native Veo 720x1280 @ 24fps)`);
 
       return {
         success: true,
         source: 'google-flow-veo-3.1',
         videoPath: finalOutputPath,
-        durationSec: 16.0,
-        width: 1080,
-        height: 1920,
+        durationSec: shot2Path ? 16.0 : 8.0,
+        width: 720,
+        height: 1280,
         isTwoShot: Boolean(shot2Path),
         shot1Path,
         shot2Path

@@ -55,7 +55,7 @@ class VideoSynthesizer {
 
     const scenes = story.visualScenes || [];
     const sc1 = this.escapeFFmpeg(scenes[0]?.caption || 'ACCIDENTAL TRANSFORMATION');
-    const sc2 = this.escapeFFmpeg(scenes[1]?.caption || 'GHOP GHOP GOP');
+    const sc2 = this.escapeFFmpeg(scenes[1]?.caption || 'NUCLEAR BOMB GIR GAYA REEE');
     const sc3 = this.escapeFFmpeg(scenes[2]?.caption || 'MILLION DOLLAR CHASE');
     const sc4 = this.escapeFFmpeg(scenes[3]?.caption || cta);
 
@@ -78,7 +78,7 @@ class VideoSynthesizer {
       // SCENE 2 (4-8s): Wild Escalation & Onomatopoeia
       `[s1_out]drawbox=x=80:y=420:w=920:h=700:color=#090d16@0.95:t=fill:enable='between(t,4,8)'[s2_0]`,
       `[s2_0]drawbox=x=80:y=420:w=920:h=700:color=#06b6d4@0.9:t=5:enable='between(t,4,8)'[s2_1]`,
-      `[s2_1]drawtext=text='GHOP GHOP GOP':x=(w-text_w)/2:y=540:fontsize=76:fontcolor=#38bdf8:enable='between(t,4,8)'[s2_2]`,
+      `[s2_1]drawtext=text='NUCLEAR BOMB GIR GAYA REEE':x=(w-text_w)/2:y=540:fontsize=56:fontcolor=#38bdf8:enable='between(t,4,8)'[s2_2]`,
       `[s2_2]drawbox=x=120:y=720:w=840:h=260:color=#06b6d4@0.15:t=fill:enable='between(t,4.4,8)'[s2_3]`,
       `[s2_3]drawtext=text='${sc2}':x=(w-text_w)/2:y=820:fontsize=44:fontcolor=white:enable='between(t,4.4,8)'[s2_out]`,
 
