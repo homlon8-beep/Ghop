@@ -1,10 +1,10 @@
 {
-  "status": "idle",
+  "status": "publishing_reel",
   "totalRuns": 5,
   "successfulRuns": 5,
   "failedRuns": 2,
   "lastRunAt": "2026-10-30T06:28:20.521Z",
   "lastSlot": "test_local",
-  "lastNiche": "Sneezed Into a Neon Bouncy Ball!",
+  "lastNiche": "The Sneezing Kid Who Became a Neon Bouncy Ball",
   "nextScheduledRun": null
 }

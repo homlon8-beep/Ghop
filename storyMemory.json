@@ -1,20 +1,20 @@
 {
-  "activeSeriesId": "series_1793341684825",
+  "activeSeriesId": "series_1793357130798",
   "lastEpisodeType": "finale",
   "lastPostSlot": "evening",
   "currentStory": {
-    "title": "Sneezed Into a Neon Bouncy Ball!",
+    "title": "The Sneezing Kid Who Became a Neon Bouncy Ball",
     "characters": [
-      "Timmy the Kid",
+      "Kid turned neon ball",
       "Sheru Bhai"
     ],
-    "hook": "A sneeze erupts, and boom—Timmy explodes into a glowing neon ball!",
-    "part1Summary": "Watch as Timmy’s mighty sneeze *ghop ghop gop* turns him into a neon bouncy ball, bouncing through the city like a comet! Sheru Bhai jumps in with his million‑dollar magnet‑umbrella, racing the glowing orb. Will he snag it? Part 2 drops TONIGHT at 7:30 PM EST! 🍿",
-    "cliffhanger": "The ball rockets toward a glowing portal as Sheru Bhai lunges, but the net snaps—who will catch it?",
-    "part1Slot": "morning",
-    "part1Timestamp": "2026-10-30T06:28:04.825Z",
-    "part2Summary": "Part 2! In our last episode Timmy’s sneeze turned him into a neon bouncy ball and the portal was about to swallow him. *GHOP GHOP GOP!* Sheru Bhai’s million‑dollar magnet‑umbrella snaps, but a reverse‑gravity trampoline springs out of thin air, catapulting the net upward. The net catches the glowing orb, flips it back, and—boom!—the ball bursts into a confetti‑filled fireworks explosion that turns Timmy back into a kid with a glittery cape. And there’s the million‑dollar prize glitter raining down! What should transform in tomorrow's saga? Drop it in the comments! 👇",
-    "part2Timestamp": "2026-10-30T08:16:39.225Z"
+    "hook": "Kid sneezes, *POP!*—a glowing rubber ball bursts out of his nose!",
+    "part1Summary": "Achoo! Little Timmy sneezes and POP!—he explodes into a neon glowing rubber ball, bouncing *ghop ghop gop* across the night sky. Sheru Bhai bursts onto the scene, wielding a million‑dollar magnetic net, racing the glowing orb. Will he catch it? Part 2 drops TOMORROW MORNING at 11:30 AM EST! 🍿",
+    "cliffhanger": "Sheru Bhai lunges with his mega‑net, but the ball slips into a swirling portal—will he survive the mystery?",
+    "part1Slot": "evening",
+    "part1Timestamp": "2026-10-30T10:45:30.798Z",
+    "part2Summary": "",
+    "part2Timestamp": null
   },
   "completedSeries": [
     {
@@ -51,8 +51,8 @@
       "completedAt": "2026-10-30T05:30:22.562Z"
     }
   ],
-  "lastUploadedPart": 2,
-  "lastUploadedSlot": "morning",
-  "lastUploadedAt": "2026-10-30T08:16:39.223Z",
-  "nextEpisodeDue": "part1"
+  "lastUploadedPart": 1,
+  "lastUploadedSlot": "evening",
+  "lastUploadedAt": "2026-10-30T10:45:30.798Z",
+  "nextEpisodeDue": "part2"
 }

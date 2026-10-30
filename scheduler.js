@@ -4,7 +4,7 @@ const path = require('path');
 const config = require('./config');
 const surrealStoryEngine = require('./surrealStoryEngine');
 const scriptGenerator = require('./scriptGenerator');
-const flowClient = require('./flowClient');
+const flowBrowserEngine = require('./flowBrowserEngine');
 const instagramUploader = require('./instagramUploader');
 
 class SocialBotScheduler {
@@ -147,24 +147,30 @@ class SocialBotScheduler {
       console.log(`[Step 1/3] Generating viral surreal script with Groq 120B memory...`);
       const storyData = await surrealStoryEngine.generateEpisode(forcePart);
 
+      // Build ultra-viral Veo 3.1 prompt
+      const scene1 = storyData.visualScenes?.[0]?.prompt || storyData.hook || 'surreal transformation';
+      const scene2 = storyData.visualScenes?.[1]?.prompt || '';
+      const isPart1 = storyData.part === 1;
+      const veoPrompt = isPart1
+        ? `cinematic 3D animation, photorealistic cartoon physics, 9:16 vertical video of ${scene1}, ${scene2}, high dopamine, colorful neon sparkles, dynamic lighting, 8k render`
+        : `cinematic 3D animation, photorealistic cartoon physics, 9:16 vertical video of ${scene1}, ${scene2}, resolving cliffhanger with explosive colorful trampoline rebound and confetti, vibrant neon lighting, 8k render`;
+
       const scriptData = {
         ...storyData,
         niche: storyData.title,
         nicheId: `surreal_pt${storyData.part}_${Date.now()}`,
         caption: storyData.instagramCaption || storyData.caption,
-        flowPrompts: {
-          basePrompt: `${storyData.visualScenes?.[0]?.prompt || ''}, ${storyData.visualScenes?.[1]?.prompt || ''}`,
-          extensionPrompt: `${storyData.visualScenes?.[2]?.prompt || ''}, ${storyData.visualScenes?.[3]?.prompt || ''}`
-        }
+        veoPrompt
       };
 
       this.state.status = 'generating_video';
       this.state.lastNiche = scriptData.title;
       this.saveState();
 
-      // 2. Flow Video Generation (16-second exact with chaining or kinetic fallback)
-      console.log(`\n[Step 2/3] Generating 16-second Reel video (Google Labs Flow multi-account / synthesis)...`);
-      const videoResult = await flowClient.generate16sVideo(scriptData);
+      // 2. Google AI Pro Flow Veo 3.1 Video Generation
+      console.log(`\n[Step 2/3] Generating authentic Google Flow Veo 3.1 Reel video...`);
+      console.log(`   Veo Prompt: "${veoPrompt}"`);
+      const videoResult = await flowBrowserEngine.generateVeoVideo(veoPrompt);
 
       this.state.status = shouldUpload ? 'publishing_reel' : 'staging_reel';
       this.saveState();
@@ -172,48 +178,46 @@ class SocialBotScheduler {
       // 3. Instagram Reels Publishing or Staging
       let publishResult;
       if (shouldUpload) {
-        console.log(`\n[Step 3/3] Publishing 16-second Reel to Instagram...`);
-        publishResult = await instagramUploader.publishReel({
-          videoPath: videoResult.videoPath,
-          coverPath: videoResult.coverPath,
-          caption: scriptData.caption,
-          scriptData
-        });
-      } else {
-        console.log(`\n[Step 3/3] Staging 16-second Reel (Generate-only mode)...`);
-        publishResult = {
-          success: true,
-          status: 'generated_staged',
-          videoPath: videoResult.videoPath,
-          coverPath: videoResult.coverPath
-        };
-        const historyEntry = {
+        console.log(`\n[Step 3/3] Publishing Veo 3.1 Reel to Instagram @feticid...`);
+        publishResult = await instagramUploader.publishViaWebAPI(videoResult.videoPath, scriptData.caption);
+        instagramUploader.recordHistory({
           id: `reel_${Date.now()}`,
-          status: 'generated_staged',
+          status: 'published',
+          mediaId: publishResult.mediaId,
+          code: publishResult.code,
+          reelUrl: publishResult.reelUrl,
           videoPath: videoResult.videoPath,
-          coverPath: videoResult.coverPath,
           caption: scriptData.caption,
           niche: scriptData.title,
           part: scriptData.part,
-          specs: {
-            isValid: true,
-            width: 1080,
-            height: 1920,
-            duration: 16.0,
-            isVertical: true
-          },
+          source: 'google-flow-veo-3.1',
           timestamp: new Date().toISOString()
+        });
+      } else {
+        console.log(`\n[Step 3/3] Staging Veo 3.1 Reel (Generate-only mode)...`);
+        publishResult = {
+          success: true,
+          status: 'generated_staged',
+          videoPath: videoResult.videoPath
         };
-        instagramUploader.recordHistory(historyEntry);
+        instagramUploader.recordHistory({
+          id: `reel_${Date.now()}`,
+          status: 'generated_staged',
+          videoPath: videoResult.videoPath,
+          caption: scriptData.caption,
+          niche: scriptData.title,
+          part: scriptData.part,
+          source: 'google-flow-veo-3.1',
+          timestamp: new Date().toISOString()
+        });
       }
 
       const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`\n======================================================`);
       console.log(`✅ [MorphVerse AI Bot] Cycle Completed Successfully in ${elapsedSec}s!`);
       console.log(`   Title: ${scriptData.title} (Part ${scriptData.part})`);
-      console.log(`   Video: ${videoResult.resolution} | Duration: ${videoResult.durationSec}s`);
-      console.log(`   Status: ${publishResult.status}`);
-      console.log(`   Video Path: ${videoResult.videoPath}`);
+      console.log(`   Veo Video: ${videoResult.videoPath}`);
+      console.log(`   Reel: ${publishResult.reelUrl || 'Staged'}`);
       console.log(`======================================================\n`);
 
       // Update State

@@ -28,6 +28,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 console.log('🚀 [Webify Social Server] Initializing 24/7 background scheduler...');
 scheduler.startAutonomousSchedule();
 
+// Keepalive self-ping every 10 minutes to prevent Render free-tier sleep
+setInterval(() => {
+  const renderUrl = process.env.RENDER_EXTERNAL_URL || 'https://webify-autonomous-bot.onrender.com';
+  fetch(`${renderUrl}/health`).catch(() => {});
+}, 10 * 60 * 1000);
+
 // ─── API ENDPOINTS ──────────────────────────────────────────────
 
 // Health check endpoint for Render zero-downtime monitoring
@@ -246,6 +252,50 @@ app.all('/api/start-veo-generation', async (req, res) => {
       console.error('[Flow] Background generation error:', err.message);
       activeFlowJob.status = 'failed';
       activeFlowJob.error = err.message;
+    }
+  })();
+});
+
+// Non-blocking trigger for autonomous post cycle
+app.post('/api/start-autonomous-cycle', (req, res) => {
+  const forcePart = req.body?.part || null;
+  const slot = req.body?.slot || 'auto';
+
+  if (activeFlowJob && activeFlowJob.status === 'running') {
+    return res.status(409).json({ success: false, message: 'A generation job is already active', job: activeFlowJob });
+  }
+
+  activeFlowJob = {
+    id: `cycle_${Date.now()}`,
+    type: 'autonomous_story_cycle',
+    forcePart,
+    slot,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+    result: null,
+    igResult: null,
+    error: null
+  };
+
+  res.json({ success: true, message: 'Autonomous story cycle initiated in background', job: activeFlowJob });
+
+  (async () => {
+    try {
+      console.log(`[Scheduler] Starting non-blocking autonomous cycle (Job: ${activeFlowJob.id})...`);
+      const cycleResult = await scheduler.executeCycle({ slot, forcePart, upload: true });
+      if (cycleResult.success) {
+        activeFlowJob.status = 'completed';
+        activeFlowJob.result = cycleResult.videoResult;
+        activeFlowJob.igResult = cycleResult.publishResult;
+        console.log(`[Scheduler] Autonomous cycle completed successfully!`);
+      } else {
+        activeFlowJob.status = 'failed';
+        activeFlowJob.error = cycleResult.error;
+      }
+    } catch (err) {
+      activeFlowJob.status = 'failed';
+      activeFlowJob.error = err.message;
+      console.error(`[Scheduler] Autonomous cycle error:`, err.message);
     }
   })();
 });

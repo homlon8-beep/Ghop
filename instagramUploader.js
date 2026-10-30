@@ -444,8 +444,14 @@ class InstagramUploader {
     const specs = this.validateVideoForReels(videoPath);
 
     // 2. Validate cover image
-    if (!fs.existsSync(coverPath)) {
-      throw new Error(`Cover image not found at ${coverPath}`);
+    if (!coverPath || !fs.existsSync(coverPath)) {
+      coverPath = videoPath.replace(/\.mp4$/i, '_cover.jpg');
+      try {
+        const { execSync } = require('child_process');
+        execSync(`ffmpeg -y -i "${videoPath}" -ss 00:00:01.000 -vframes 1 "${coverPath}"`, { stdio: 'ignore' });
+      } catch (e) {
+        console.warn(`[InstagramUploader] Cover extraction note: ${e.message}`);
+      }
     }
 
     // Try verified Web API publisher first (avoids deprecated mobile private API block)
