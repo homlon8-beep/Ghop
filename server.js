@@ -86,6 +86,11 @@ app.get('/api/story-status', (req, res) => {
   });
 });
 
+// 1-Tap Clipboard Copier Helper
+app.get('/copy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'copy.html'));
+});
+
 // Trigger Part 1 (Morning Hook & Cliffhanger)
 app.post('/api/generate-pt1', async (req, res) => {
   try {

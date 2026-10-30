@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MorphVerse AI • 1-Tap Clipboard Copier</title>
+  <style>
+    body {
+      background: #090514;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 24px 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+      margin: 0;
+    }
+    .card {
+      background: #130a24;
+      border: 1px solid rgba(192, 132, 252, 0.3);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 8px;
+      color: #c084fc;
+    }
+    p {
+      color: #a1a1aa;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .copy-btn {
+      background: linear-gradient(135deg, #a855f7, #3b82f6);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 24px;
+      font-size: 16px;
+      font-weight: 800;
+      width: 100%;
+      cursor: pointer;
+      box-shadow: 0 4px 25px rgba(168, 85, 247, 0.4);
+      transition: all 0.2s ease;
+    }
+    .copy-btn:active {
+      transform: scale(0.97);
+    }
+    .code-box {
+      margin-top: 20px;
+      background: #090514;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      text-align: left;
+      word-break: break-all;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #10b981;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      display: none;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📋 1-Tap Clipboard Copier</h1>
+    <p>Tap the big purple button below to copy the clean, uncorrupted live sync code directly into your phone's clipboard!</p>
+    
+    <button class="copy-btn" id="btnCopy" onclick="copySnippet()">
+      ⚡ TAP TO COPY SCRIPT
+    </button>
+
+    <div class="code-box" id="codeText" onclick="selectCode()">
+      Loading script...
+    </div>
+  </div>
+
+  <div class="toast" id="toast">✅ COPIED TO CLIPBOARD!</div>
+
+  <script>
+    let scriptContent = '';
+
+    fetch('/sync.js')
+      .then(r => r.text())
+      .then(t => {
+        scriptContent = t;
+        document.getElementById('codeText').innerText = t;
+      });
+
+    async function copySnippet() {
+      try {
+        if (!scriptContent) {
+          const res = await fetch('/sync.js');
+          scriptContent = await res.text();
+        }
+        await navigator.clipboard.writeText(scriptContent);
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 3000);
+      } catch (err) {
+        alert('Please tap the text box below and copy manually!');
+      }
+    }
+
+    function selectCode() {
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('codeText'));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  </script>
+</body>
+</html>
