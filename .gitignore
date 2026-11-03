@@ -1,0 +1,9 @@
+node_modules/
+auth_info_baileys/
+auth_sessions/
+.env
+leads_db.json
+leads_db.backup.json
+sent_history.json
+logs/
+.DS_Store
