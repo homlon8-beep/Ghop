@@ -307,6 +307,11 @@ app.get('/', (req, res) => {
                   <div class="device-meta" style="margin-top: 0.25rem;">
                     Status: <span style="color: #e2e8f0;">${d.currentStatus}</span>
                     ${d.nextActionTime ? ` • Next: <span style="color: #38bdf8;">${d.nextActionTime}</span>` : ''}
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">
+                      ☀️ Day (2-6 PM): <strong style="color: #fde047;">${d.afternoonSentCount || 0}/${d.afternoonTarget || 30}</strong>
+                      &nbsp;|&nbsp; 🌙 Night (8:30-11:30 PM): <strong style="color: #67e8f9;">${d.nightSentCount || 0}/${d.nightTarget || 20}</strong>
+                      &nbsp;|&nbsp; Cluster: <strong>${d.currentClusterCount || 0}/${d.clusterSize || 2}</strong>
+                    </div>
                   </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -326,29 +331,29 @@ app.get('/', (req, res) => {
         <div class="section-box" style="border-left: 4px solid #6366f1; background: #312e8115; margin-bottom: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
-              <h3 style="margin: 0; color: #a5b4fc;">⚡ Pacing Speed &amp; Human Mode</h3>
+              <h3 style="margin: 0; color: #a5b4fc;">⚡ Extreme Human Pacing &amp; Shifts</h3>
               <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">
-                Active: <strong style="color: #38bdf8; text-transform: uppercase;">${state.pacingPreset || 'fast'}</strong> 
-                • Delay: <strong>${Math.round((state.minMsgDelayMs || 30000)/1000)}s - ${Math.round((state.maxMsgDelayMs || 45000)/1000)}s</strong> / msg 
-                • Operating: <strong>${state.operatingHours || '24/7 Human Dispatch'}</strong>
+                Mode: <strong style="color: #38bdf8; text-transform: uppercase;">${state.pacingPreset || 'extreme_human'}</strong> 
+                • Shift: <strong style="color: #34d399;">${state.shiftName || state.operatingHours}</strong>
+                • Pacing: <strong>1-3 msgs cluster, random 15-25m breaks</strong>
               </p>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
+                <input type="hidden" name="preset" value="extreme_human">
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'extreme_human' ? '#4f46e5' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">👤 Extreme Human (30 Day + 20 Night)</button>
+              </form>
+              <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="fast">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'fast' ? '#4f46e5' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚡ Fast Human (30-45s)</button>
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'fast' ? '#059669' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚡ Fast Human (30-45s)</button>
               </form>
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="turbo">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'turbo' ? '#059669' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">🚀 Turbo (20-35s)</button>
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'turbo' ? '#d97706' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">🚀 Turbo (20-35s)</button>
               </form>
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="balanced">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'balanced' ? '#d97706' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚖️ Balanced (50-90s)</button>
-              </form>
-              <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
-                <input type="hidden" name="preset" value="ultra_safe">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'ultra_safe' ? '#dc2626' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">🛡️ Ultra-Safe (2-4m, 2-6PM)</button>
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'balanced' ? '#dc2626' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚖️ Balanced (50-90s)</button>
               </form>
             </div>
           </div>

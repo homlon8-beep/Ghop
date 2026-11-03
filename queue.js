@@ -22,15 +22,17 @@ const CONFIG_FILE = path.join(__dirname, 'bot_config.json');
 // Persistent & Customizable Pacing & Daily Limits
 function loadBotConfig() {
   const defaults = {
-    dailyMaxLeadsPerDevice: parseInt(process.env.DAILY_MAX_LEADS_PER_DEVICE || '50', 10),
-    minMsgDelayMs: parseInt(process.env.MIN_MSG_DELAY_MS || '30000', 10),
-    maxMsgDelayMs: parseInt(process.env.MAX_MSG_DELAY_MS || '45000', 10),
-    minBreakMins: 1.5,
-    maxBreakMins: 3,
-    minBatchSize: 12,
-    maxBatchSize: 18,
-    businessHoursShield: false, // Default 24/7 so messages dispatch immediately
-    pacingPreset: 'fast' // 'turbo', 'fast', 'balanced', 'ultra_safe', 'custom'
+    dailyMaxLeadsPerDevice: 50,
+    afternoonTarget: 30, // 2:00 PM - 6:00 PM IST (30 msgs)
+    nightTarget: 20,     // 8:30 PM - 11:30 PM IST (20 msgs)
+    minMsgDelayMs: 45000,
+    maxMsgDelayMs: 90000,
+    minBreakMins: 14,
+    maxBreakMins: 26,
+    minClusterSize: 1,
+    maxClusterSize: 3,
+    businessHoursShield: true, // Strict 2-6 PM (30) & 8:30-11:30 PM (20) IST
+    pacingPreset: 'extreme_human'
   };
 
   try {
@@ -50,7 +52,7 @@ function saveBotConfig(updates) {
   botConfig = { ...botConfig, ...updates };
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(botConfig, null, 2), 'utf-8');
-    console.log(`⚙️ [Config Saved] Limit: ${botConfig.dailyMaxLeadsPerDevice} msgs/device (Preset: ${botConfig.pacingPreset}, Delay: ${(botConfig.minMsgDelayMs/1000).toFixed(0)}-${(botConfig.maxMsgDelayMs/1000).toFixed(0)}s, Hours-Shield: ${botConfig.businessHoursShield}).`);
+    console.log(`⚙️ [Config Saved] Limit: ${botConfig.dailyMaxLeadsPerDevice} msgs/device (Preset: ${botConfig.pacingPreset}, Afternoon: ${botConfig.afternoonTarget || 30}, Night: ${botConfig.nightTarget || 20}, Break: ${botConfig.minBreakMins}-${botConfig.maxBreakMins}m, Hours-Shield: ${botConfig.businessHoursShield}).`);
   } catch (err) {
     console.error('Failed to save bot_config.json:', err.message);
   }
@@ -63,37 +65,37 @@ function setDailyMaxLeadsPerDevice(count, preset = 'custom') {
 
   const updates = { dailyMaxLeadsPerDevice: num, pacingPreset: preset };
 
-  if (preset === 'turbo') {
+  if (preset === 'extreme_human') {
+    updates.minMsgDelayMs = 45000;
+    updates.maxMsgDelayMs = 90000;
+    updates.minBreakMins = 14;
+    updates.maxBreakMins = 26;
+    updates.afternoonTarget = 30;
+    updates.nightTarget = 20;
+    updates.businessHoursShield = true;
+  } else if (preset === 'turbo') {
     updates.minMsgDelayMs = 20000;
     updates.maxMsgDelayMs = 35000;
     updates.minBreakMins = 1;
     updates.maxBreakMins = 2;
-    updates.minBatchSize = 15;
-    updates.maxBatchSize = 25;
     updates.businessHoursShield = false;
   } else if (preset === 'fast' || preset === 'fast_human') {
     updates.minMsgDelayMs = 30000;
     updates.maxMsgDelayMs = 45000;
     updates.minBreakMins = 1.5;
     updates.maxBreakMins = 3;
-    updates.minBatchSize = 12;
-    updates.maxBatchSize = 18;
     updates.businessHoursShield = false;
   } else if (preset === 'balanced') {
     updates.minMsgDelayMs = 50000;
     updates.maxMsgDelayMs = 90000;
     updates.minBreakMins = 8;
     updates.maxBreakMins = 15;
-    updates.minBatchSize = 6;
-    updates.maxBatchSize = 10;
     updates.businessHoursShield = false;
   } else if (preset === 'ultra_safe') {
     updates.minMsgDelayMs = 120000;
     updates.maxMsgDelayMs = 240000;
     updates.minBreakMins = 20;
     updates.maxBreakMins = 35;
-    updates.minBatchSize = 4;
-    updates.maxBatchSize = 7;
     updates.businessHoursShield = true;
   }
 
@@ -106,8 +108,8 @@ function updatePacingConfig(updates = {}) {
     'maxMsgDelayMs',
     'minBreakMins',
     'maxBreakMins',
-    'minBatchSize',
-    'maxBatchSize',
+    'afternoonTarget',
+    'nightTarget',
     'businessHoursShield',
     'dailyMaxLeadsPerDevice',
     'pacingPreset'
@@ -131,23 +133,28 @@ let currentDay = new Date().toDateString();
 // Device worker states: deviceId (1..6) -> WorkerState
 const deviceStates = new Map();
 
-function getRandomBatchLimit() {
-  const min = botConfig.minBatchSize || 8;
-  const max = botConfig.maxBatchSize || 15;
+function getRandomClusterLimit() {
+  // Real human behavior: mostly 2 messages, occasionally 1 or 3
+  const roll = Math.random();
+  if (roll < 0.25) return 1;
+  if (roll < 0.85) return 2;
+  return 3;
+}
+
+function getRandomInClusterDelayMs() {
+  // Realistic typing + reading pause inside a cluster: 45s to 90s
+  const min = botConfig.minMsgDelayMs || 45000;
+  const max = botConfig.maxMsgDelayMs || 90000;
   return Math.floor(min + Math.random() * (max - min + 1));
 }
 
-function getRandomMsgDelayMs() {
-  const min = botConfig.minMsgDelayMs || 30000;
-  const max = botConfig.maxMsgDelayMs || 45000;
-  return Math.floor(min + Math.random() * (max - min + 1));
-}
-
-function getRandomBreakDurationMs() {
-  const min = botConfig.minBreakMins || 1.5;
-  const max = botConfig.maxBreakMins || 3;
-  const mins = min + Math.random() * (max - min);
-  return Math.floor(mins * 60 * 1000);
+function getRandomClusterBreakMs() {
+  // Deep random human break: 14 to 26 minutes (averages ~20 mins, exactly as LO requested)
+  const minMins = botConfig.minBreakMins || 14;
+  const maxMins = botConfig.maxBreakMins || 26;
+  const mins = minMins + Math.random() * (maxMins - minMins);
+  const jitterSecs = Math.floor(Math.random() * 60);
+  return Math.floor(mins * 60 * 1000 + jitterSecs * 1000);
 }
 
 function getIndianTimeParts() {
@@ -162,28 +169,83 @@ function getIndianTimeParts() {
   };
 }
 
-function isIndianClinicHours() {
+function getCurrentShiftInfo() {
   if (botConfig.businessHoursShield === false) {
-    return true; // 24/7 immediate operation per user setting
+    return {
+      isActiveShift: true,
+      currentShift: 'unrestricted',
+      shiftName: 'Unrestricted 24/7',
+      shiftMax: botConfig.dailyMaxLeadsPerDevice || 50
+    };
   }
-  const { hour } = getIndianTimeParts();
-  // Strictly 2:00 PM IST (14:00) to 6:00 PM IST (18:00)
-  return (hour >= 14 && hour < 18);
+
+  const { hour, minute, dateStr } = getIndianTimeParts();
+  const timeInMinutes = hour * 60 + minute;
+
+  // Afternoon Shift: 2:00 PM (14:00) to 6:00 PM (18:00) -> 840 to 1080 mins
+  const isAfternoon = (timeInMinutes >= 840 && timeInMinutes < 1080);
+
+  // Night Shift: 8:30 PM (20:30) to 11:30 PM (23:30) -> 1230 to 1410 mins
+  const isNight = (timeInMinutes >= 1230 && timeInMinutes < 1410);
+
+  let currentShift = null;
+  let shiftName = 'Off-Shift Rest';
+  let shiftMax = 50;
+
+  if (isAfternoon) {
+    currentShift = 'afternoon';
+    shiftName = 'Afternoon Clinic (2 PM - 6 PM IST)';
+    shiftMax = botConfig.afternoonTarget || 30;
+  } else if (isNight) {
+    currentShift = 'night';
+    shiftName = 'Night Shift (8:30 PM - 11:30 PM IST)';
+    shiftMax = botConfig.nightTarget || 20;
+  }
+
+  return {
+    isAfternoon,
+    isNight,
+    isActiveShift: (isAfternoon || isNight),
+    currentShift,
+    shiftName,
+    shiftMax,
+    hour,
+    minute,
+    timeInMinutes,
+    dateStr
+  };
 }
 
-function getNext2PmIstTimestamp() {
+function getNextShiftTimestamp() {
+  const { hour, minute } = getIndianTimeParts();
+  const timeInMinutes = hour * 60 + minute;
   const now = new Date();
   const istStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const istDate = new Date(istStr);
-
   const target = new Date(istDate);
-  if (istDate.getHours() >= 18) {
+
+  if (timeInMinutes < 840) {
+    // Before 2:00 PM -> Next is 2:00 PM today
+    target.setHours(14, 0, 0, 0);
+  } else if (timeInMinutes >= 840 && timeInMinutes < 1230) {
+    // Between 6:00 PM and 8:30 PM -> Next is 8:30 PM tonight
+    target.setHours(20, 30, 0, 0);
+  } else {
+    // After 11:30 PM -> Next is 2:00 PM tomorrow
     target.setDate(target.getDate() + 1);
+    target.setHours(14, 0, 0, 0);
   }
-  target.setHours(14, 0, 0, 0);
 
   const diffMs = target.getTime() - istDate.getTime();
   return Date.now() + Math.max(diffMs, 60000);
+}
+
+function isIndianClinicHours() {
+  return getCurrentShiftInfo().isActiveShift;
+}
+
+function getNext2PmIstTimestamp() {
+  return getNextShiftTimestamp();
 }
 
 function formatIndiaTime(timestamp) {
@@ -208,10 +270,12 @@ function checkAndResetDailyCounters() {
     const maxLimit = botConfig.dailyMaxLeadsPerDevice || 50;
     for (const state of deviceStates.values()) {
       state.dailySentCount = 0;
-      state.currentBatchCount = 0;
-      state.currentBatchLimit = getRandomBatchLimit();
+      state.afternoonSentCount = 0;
+      state.nightSentCount = 0;
+      state.currentClusterCount = 0;
+      state.currentClusterLimit = getRandomClusterLimit();
     }
-    console.log(`🌅 [Anti-Ban Engine] New calendar day. Reset daily outreach counters to 0/${maxLimit} per device.`);
+    console.log(`🌅 [Extreme Human Engine] New calendar day. Reset daily outreach counters: 0/30 (Afternoon) + 0/20 (Night) = 0/${maxLimit} total per device.`);
   }
 }
 
@@ -220,9 +284,11 @@ function getOrCreateDeviceState(deviceId) {
   if (!state) {
     state = {
       id: deviceId,
-      currentBatchCount: 0,
-      currentBatchLimit: getRandomBatchLimit(),
+      currentClusterCount: 0,
+      currentClusterLimit: getRandomClusterLimit(),
       dailySentCount: 0,
+      afternoonSentCount: 0,
+      nightSentCount: 0,
       totalSentSession: 0,
       consecutiveFailures: 0,
       nextActionTime: null,
@@ -243,7 +309,7 @@ async function sleep(ms) {
 async function runDeviceWorker(deviceId) {
   const state = getOrCreateDeviceState(deviceId);
   const maxDaily = botConfig.dailyMaxLeadsPerDevice || 50;
-  console.log(`⚡ [Worker Device ${deviceId}] Started independent dispatcher (${maxDaily} leads/day cap, preset: ${botConfig.pacingPreset}).`);
+  console.log(`⚡ [Worker Device ${deviceId}] Started Extreme Human Dispatcher (30 afternoon 2-6 PM + 20 night 8:30-11:30 PM = ${maxDaily} total).`);
 
   // Stagger startup so all devices don't fire at the exact same second
   await sleep((deviceId - 1) * 15000);
@@ -257,21 +323,43 @@ async function runDeviceWorker(deviceId) {
 
     checkAndResetDailyCounters();
 
+    const shift = getCurrentShiftInfo();
     const currentCap = botConfig.dailyMaxLeadsPerDevice || 50;
-    // 1. Device Daily Cap Check
+
+    // 1. Device Daily Cap Check (50 leads/day total)
     if (state.dailySentCount >= currentCap) {
-      state.currentStatus = `Daily Safety Cap Reached (${state.dailySentCount}/${currentCap}). Resting safely until tomorrow...`;
-      state.nextActionTime = getNext2PmIstTimestamp();
+      state.currentStatus = `Daily Cap Reached (${state.dailySentCount}/${currentCap}: 30 afternoon + 20 night). Resting safely until 2:00 PM IST tomorrow...`;
+      state.nextActionTime = getNextShiftTimestamp();
       await sleep(60000);
       continue;
     }
 
-    // 2. Operating Hours Check (Active 24/7 if businessHoursShield is false)
-    if (!isIndianClinicHours()) {
-      state.currentStatus = '🌙 Rest Mode (Active 2:00 PM – 6:00 PM IST only). Resuming at 2:00 PM IST...';
-      state.nextActionTime = getNext2PmIstTimestamp();
-      await sleep(60000);
-      continue;
+    // 2. Strict Shift Enforcement (2:00 PM - 6:00 PM [30] & 8:30 PM - 11:30 PM [20] IST)
+    if (botConfig.businessHoursShield !== false) {
+      if (!shift.isActiveShift) {
+        const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
+        state.currentStatus = `🌙 Rest Mode (Active 2-6 PM [30 msgs] & 8:30-11:30 PM [20 msgs] IST). Next shift at ${nextTimeStr}...`;
+        state.nextActionTime = getNextShiftTimestamp();
+        await sleep(60000);
+        continue;
+      }
+
+      // Check shift sub-allocations
+      if (shift.isAfternoon && (state.afternoonSentCount || 0) >= (botConfig.afternoonTarget || 30)) {
+        const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
+        state.currentStatus = `Afternoon Shift Complete (${state.afternoonSentCount}/30 sent). Evening rest until 8:30 PM IST night shift (${nextTimeStr})...`;
+        state.nextActionTime = getNextShiftTimestamp();
+        await sleep(60000);
+        continue;
+      }
+
+      if (shift.isNight && (state.nightSentCount || 0) >= (botConfig.nightTarget || 20)) {
+        const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
+        state.currentStatus = `Night Shift Complete (${state.nightSentCount}/20 sent). Full day quota reached. Sleeping until 2:00 PM IST tomorrow (${nextTimeStr})...`;
+        state.nextActionTime = getNextShiftTimestamp();
+        await sleep(60000);
+        continue;
+      }
     }
 
     // 3. Check if this specific device is connected
@@ -352,13 +440,18 @@ async function runDeviceWorker(deviceId) {
       const sent = await whatsapp.sendTextMessage(deviceId, lead.jid, outreachText);
       if (sent) {
         scraper.updateLeadStatus(lead.phone, 'sent', null, deviceId);
-        state.currentBatchCount++;
+        state.currentClusterCount = (state.currentClusterCount || 0) + 1;
         state.totalSentSession++;
         state.dailySentCount++;
+        if (shift.isAfternoon) state.afternoonSentCount = (state.afternoonSentCount || 0) + 1;
+        if (shift.isNight) state.nightSentCount = (state.nightSentCount || 0) + 1;
         state.consecutiveFailures = 0;
         sendSucceeded = true;
         const currentCap = botConfig.dailyMaxLeadsPerDevice || 50;
-        console.log(`✅ [Real WhatsApp Sent by Device ${deviceId} (${state.currentBatchCount}/${state.currentBatchLimit})] To +${lead.phone}. Today: ${state.dailySentCount}/${currentCap}`);
+        const shiftInfoStr = shift.isAfternoon 
+          ? `Afternoon: ${state.afternoonSentCount}/30` 
+          : (shift.isNight ? `Night: ${state.nightSentCount}/20` : `Unrestricted: ${state.dailySentCount}/${currentCap}`);
+        console.log(`✅ [Real WhatsApp Sent by Device ${deviceId} (${state.currentClusterCount}/${state.currentClusterLimit} in cluster)] To +${lead.phone}. Shift: ${shiftInfoStr}. Today: ${state.dailySentCount}/${currentCap}`);
       } else {
         state.consecutiveFailures++;
         scraper.updateLeadStatus(lead.phone, 'failed', 'Socket send failure', deviceId);
@@ -379,28 +472,28 @@ async function runDeviceWorker(deviceId) {
       continue;
     }
 
-    // 11. Human Pacing / Breaks
+    // 11. Extreme Human Pacing / Deep Random Pauses (like 2 now, 2 after 20 mins)
     if (sendSucceeded) {
-      if (state.currentBatchCount >= state.currentBatchLimit) {
-        const breakMs = getRandomBreakDurationMs();
-        const breakMins = Math.round(breakMs / 60000);
+      if (state.currentClusterCount >= state.currentClusterLimit) {
+        const breakMs = getRandomClusterBreakMs();
+        const breakMins = (breakMs / 60000).toFixed(1);
         state.nextActionTime = Date.now() + breakMs;
-        state.currentStatus = `Mini-batch of ${state.currentBatchLimit} sent! Taking ${breakMins}-min tea break...`;
-        console.log(`\n☕ [Human Break Device ${deviceId}] Batch limit hit (${state.currentBatchLimit} sent). Taking ${breakMins}-minute break until ${formatIndiaTime(state.nextActionTime)}...\n`);
+        state.currentStatus = `Cluster of ${state.currentClusterLimit} sent! Natural break (~${Math.round(breakMins)}m until ${formatIndiaTime(state.nextActionTime)})...`;
+        console.log(`\n☕ [Extreme Human Break Device ${deviceId}] Sent cluster of ${state.currentClusterLimit}. Taking ${breakMins}-minute break until ${formatIndiaTime(state.nextActionTime)}...\n`);
 
         await sleep(breakMs);
 
-        state.currentBatchCount = 0;
-        state.currentBatchLimit = getRandomBatchLimit();
-        console.log(`⚡ [Worker Device ${deviceId}] Break finished! Next batch rolled: ${state.currentBatchLimit} leads.`);
+        state.currentClusterCount = 0;
+        state.currentClusterLimit = getRandomClusterLimit();
+        console.log(`⚡ [Worker Device ${deviceId}] Break finished! Next cluster rolled: ${state.currentClusterLimit} leads.`);
       } else {
-        // Random 1 to 2 minutes jitter between messages
-        const jitterDelayMs = getRandomMsgDelayMs();
-        const delaySec = Math.round(jitterDelayMs / 1000);
-        state.nextActionTime = Date.now() + jitterDelayMs;
-        state.currentStatus = `Waiting ${delaySec}s before next lead (1-2m jitter)...`;
-        console.log(`⏳ [Pacing Device ${deviceId}] Next lead scheduled at ${formatIndiaTime(state.nextActionTime)} (${delaySec}s delay)...`);
-        await sleep(jitterDelayMs);
+        // Natural human typing/reading hesitation inside the cluster (45s to 90s)
+        const inClusterDelayMs = getRandomInClusterDelayMs();
+        const delaySec = Math.round(inClusterDelayMs / 1000);
+        state.nextActionTime = Date.now() + inClusterDelayMs;
+        state.currentStatus = `Pacing inside cluster (${state.currentClusterCount}/${state.currentClusterLimit}). Next in ${delaySec}s...`;
+        console.log(`⏳ [In-Cluster Delay Device ${deviceId}] Message ${state.currentClusterCount}/${state.currentClusterLimit}. Pausing ${delaySec}s before next...`);
+        await sleep(inClusterDelayMs);
       }
     } else {
       await sleep(2000);
@@ -458,9 +551,13 @@ function getQueueState() {
       isConnected: dev ? dev.isConnected : false,
       phone: dev ? dev.phone : null,
       dailySentCount: s.dailySentCount,
+      afternoonSentCount: s.afternoonSentCount || 0,
+      afternoonTarget: botConfig.afternoonTarget || 30,
+      nightSentCount: s.nightSentCount || 0,
+      nightTarget: botConfig.nightTarget || 20,
       dailyMaxLeads: currentCap,
-      currentBatchCount: s.currentBatchCount,
-      batchSize: s.currentBatchLimit,
+      currentClusterCount: s.currentClusterCount || 0,
+      clusterSize: s.currentClusterLimit || 2,
       currentStatus: s.currentStatus,
       nextActionTime: formatIndiaTime(s.nextActionTime)
     });
@@ -468,6 +565,7 @@ function getQueueState() {
 
   const activeCount = connectedDevices.length;
   const dynamicTarget = activeCount > 0 ? activeCount * currentCap : 150;
+  const shift = getCurrentShiftInfo();
 
   return {
     isRunning,
@@ -480,16 +578,18 @@ function getQueueState() {
     totalSentSession: totalSessionSent,
     totalSentDb: sentCount,
     queuedRemaining: queuedCount,
-    isDaytime: isIndianClinicHours(),
-    operatingHours: botConfig.businessHoursShield ? "2:00 PM - 6:00 PM IST" : "24/7 Unrestricted Human Dispatch",
-    pacingPreset: botConfig.pacingPreset || 'fast',
+    isDaytime: shift.isActiveShift,
+    currentShift: shift.currentShift,
+    shiftName: shift.shiftName,
+    operatingHours: botConfig.businessHoursShield ? "2:00 PM - 6:00 PM (30) & 8:30 PM - 11:30 PM (20) IST" : "24/7 Human Dispatch",
+    pacingPreset: botConfig.pacingPreset || 'extreme_human',
     minMsgDelayMs: botConfig.minMsgDelayMs,
     maxMsgDelayMs: botConfig.maxMsgDelayMs,
     businessHoursShield: botConfig.businessHoursShield,
     devices: devicesDetail,
     // Backwards compatibility shortcuts
     currentStatus: activeCount > 0 ? `${activeCount}/${MAX_DEVICES} Devices Active (${totalDailySent}/${dynamicTarget} Sent)` : 'Waiting for WhatsApp QR scan on /qr...',
-    batchSize: 7,
+    batchSize: 2,
     currentBatchCount: 0,
     nextActionTime: null
   };
