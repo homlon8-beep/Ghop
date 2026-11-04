@@ -507,7 +507,8 @@ async function runDeviceWorker(deviceId) {
 async function startQueueWorker() {
   if (isRunning) return;
   isRunning = true;
-  console.log(`🚀 [Multi-Device Master Engine Active] Up to ${MAX_DEVICES} devices, ${DAILY_MAX_LEADS_PER_DEVICE} leads/day each (3 devices = 150 leads/day).`);
+  const maxPerDev = botConfig.dailyMaxLeadsPerDevice || 50;
+  console.log(`🚀 [Multi-Device Master Engine Active] Up to ${MAX_DEVICES} devices, ${maxPerDev} leads/day each (3 devices = ${maxPerDev * 3} leads/day).`);
 
   // Launch independent worker for each device slot (1..MAX_DEVICES)
   for (let i = 1; i <= MAX_DEVICES; i++) {
@@ -595,6 +596,10 @@ function getQueueState() {
   };
 }
 
+function getBotConfig() {
+  return botConfig;
+}
+
 module.exports = {
   startQueueWorker,
   pauseQueue,
@@ -602,6 +607,7 @@ module.exports = {
   getQueueState,
   loadBotConfig,
   saveBotConfig,
+  getBotConfig,
   setDailyMaxLeadsPerDevice,
   updatePacingConfig
 };

@@ -1,0 +1,13 @@
+{
+  "dailyMaxLeadsPerDevice": 50,
+  "afternoonTarget": 30,
+  "nightTarget": 20,
+  "minMsgDelayMs": 45000,
+  "maxMsgDelayMs": 90000,
+  "minBreakMins": 14,
+  "maxBreakMins": 26,
+  "minClusterSize": 1,
+  "maxClusterSize": 3,
+  "businessHoursShield": true,
+  "pacingPreset": "extreme_human"
+}

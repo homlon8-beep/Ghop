@@ -355,6 +355,11 @@ app.get('/', (req, res) => {
                 <input type="hidden" name="preset" value="balanced">
                 <button type="submit" class="btn" style="background: ${state.pacingPreset === 'balanced' ? '#dc2626' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚖️ Balanced (50-90s)</button>
               </form>
+              <form method="POST" action="/api/settings/toggle-shift-shield" style="margin: 0;">
+                <button type="submit" class="btn" style="background: ${state.businessHoursShield ? '#047857' : '#d97706'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">
+                  ${state.businessHoursShield ? '🛡️ Shifts Active (2-6 PM & 8:30-11:30 PM)' : '⚡ 24/7 Dispatch (Sending Now)'}
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -604,6 +609,16 @@ app.post('/api/settings/mode', (req, res) => {
 app.post('/api/settings/pacing', (req, res) => {
   const config = queue.updatePacingConfig(req.body);
   res.json({ success: true, config });
+});
+
+app.post('/api/settings/toggle-shift-shield', (req, res) => {
+  const cfg = queue.getBotConfig ? queue.getBotConfig() : queue.loadBotConfig();
+  const current = cfg.businessHoursShield !== false;
+  queue.updatePacingConfig({ businessHoursShield: !current });
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.json({ success: true, businessHoursShield: !current });
+  }
+  res.redirect(`/?shift_shield=${!current}`);
 });
 
 app.get('/api/config', (req, res) => {
