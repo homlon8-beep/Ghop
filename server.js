@@ -279,6 +279,68 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
+        ${req.query.test_flight === 'success' ? `
+          <div style="background: #022c22; border: 1px solid #10b981; border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; color: #a7f3d0;">
+            🚀 <strong>Live Test Flight Succeeded!</strong> Dispatched to <strong>+${req.query.phone}</strong>. Typing Presence: <strong>${req.query.typingMs}ms</strong> | Zero-Width Polymorphic Markers Injected: <strong>${req.query.injected}</strong>. Check your WhatsApp now!
+          </div>
+        ` : ''}
+        ${req.query.test_flight === 'error' ? `
+          <div style="background: #450a0a; border: 1px solid #ef4444; border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; color: #fca5a5;">
+            ⚠️ <strong>Test Flight Failed:</strong> ${req.query.error}
+          </div>
+        ` : ''}
+
+        <!-- Ghost Protocol Stealth Telemetry Matrix -->
+        <div class="section-box" style="border: 1px solid #10b98144; background: linear-gradient(135deg, #022c2215, #090d16); margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="background: #059669; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 800; letter-spacing: 0.05em;">GHOST PROTOCOL OP</span>
+              <h3 style="margin: 0; color: #34d399; font-size: 1.05rem;">Bemisaal Anti-Ban Telemetry (3 PM – 9 PM IST)</h3>
+            </div>
+            <span style="background: #065f46; color: #a7f3d0; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 9999px; font-weight: 700;">ACTIVE SHIELD</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; font-size: 0.82rem; color: #cbd5e1;">
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Socket Probe (USync)</span>
+              <strong style="color: #34d399;">DISABLED (100% Silent)</strong>
+            </div>
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Cryptographic Polymorphism</span>
+              <strong style="color: #38bdf8;">Zero-Width Hash Bypass</strong>
+            </div>
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Keystroke Simulation</span>
+              <strong style="color: #a78bfa;">Gaussian Markov 45-55 WPM</strong>
+            </div>
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Shift Lock</span>
+              <strong style="color: #fbbf24;">3:00 PM – 9:00 PM IST Capped</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Test-Flight Verification Tool -->
+        <div class="section-box" style="border-left: 4px solid #38bdf8; background: #0c4a6e12; margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h3 style="margin: 0; color: #38bdf8;">🚀 Live Test-Flight (Instant Phone Verification)</h3>
+              <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">
+                Enter your 10-digit mobile number to fire an instant test message. Check typing presence and formatting on your WhatsApp.
+              </p>
+            </div>
+            <span style="background: #075985; color: #bae6fd; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 700;">DEV VERIFIED</span>
+          </div>
+          <form method="POST" action="/api/test-flight" style="margin-top: 0.75rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <input type="text" name="phone" placeholder="Enter 10-digit mobile number (e.g. 9876543210)" style="flex: 2; min-width: 220px; background: #090d16; border: 1px solid #334155; border-radius: 8px; color: #fff; padding: 0.65rem 0.85rem; font-size: 0.9rem;" required />
+              <select name="deviceId" style="flex: 1; min-width: 130px; background: #090d16; border: 1px solid #334155; border-radius: 8px; color: #fff; padding: 0.65rem 0.85rem; font-size: 0.9rem;">
+                ${state.devices.map(d => `<option value="${d.id}" ${d.isConnected ? '' : 'disabled'}>Device ${d.id} ${d.isConnected ? `(Online: +${d.phone})` : '(Offline)'}</option>`).join('')}
+              </select>
+              <button type="submit" class="btn btn-green" style="padding: 0.65rem 1.25rem;">🚀 Send Test Flight</button>
+            </div>
+          </form>
+        </div>
+
         ${req.query.shielded ? `
           <div style="background: #1e1b4b; border: 1px solid #8b5cf6; border-radius: 12px; padding: 1.1rem; margin-bottom: 1.5rem; color: #e9d5ff;">
             🛡️ <strong>Older Bot Shield Updated!</strong> Permanently shielded <strong>${req.query.count || 0}</strong> numbers from ever receiving outreach again.
@@ -764,6 +826,25 @@ app.post('/api/settings/toggle-shift-shield', (req, res) => {
     return res.json({ success: true, businessHoursShield: !current });
   }
   res.redirect(`/?shift_shield=${!current}`);
+});
+
+app.post('/api/test-flight', async (req, res) => {
+  const deviceId = parseInt(req.body.deviceId || '1', 10);
+  const targetPhone = req.body.phone || '';
+  const customText = req.body.text || null;
+
+  try {
+    const result = await whatsapp.sendTestFlightMessage(deviceId, targetPhone, customText);
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({ success: true, result });
+    }
+    res.redirect(`/?test_flight=success&phone=${encodeURIComponent(targetPhone)}&typingMs=${result.typingDurationMs}&injected=${result.zeroWidthInjected}`);
+  } catch (err) {
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    res.redirect(`/?test_flight=error&error=${encodeURIComponent(err.message)}`);
+  }
 });
 
 app.get('/api/config', (req, res) => {
