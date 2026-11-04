@@ -242,7 +242,7 @@ app.get('/', (req, res) => {
         <header>
           <div>
             <h1>Bemisaal Dawakhana — Multi-Device Lead Engine</h1>
-            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.2rem;">⏰ Active 2:00 PM – 6:00 PM IST • Gents Sexual Wellness (2 Majoon + 30 Tablets + 1 Special Oil) • Zero Delhi • 100% Real Human Anti-Ban</p>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.2rem;">⏰ Active 3:00 PM – 9:00 PM IST • Gents Sexual Wellness (2 Majoon + 30 Tablets + 1 Special Oil) • Zero Delhi • 100% Real Human Anti-Ban</p>
           </div>
           <div>
             ${state.connectedDevicesCount > 0 ?
@@ -309,8 +309,7 @@ app.get('/', (req, res) => {
                     Status: <span style="color: #e2e8f0;">${d.currentStatus}</span>
                     ${d.nextActionTime ? ` • Next: <span style="color: #38bdf8;">${d.nextActionTime}</span>` : ''}
                     <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">
-                      ☀️ Day (2-6 PM): <strong style="color: #fde047;">${d.afternoonSentCount || 0}/${d.afternoonTarget || 30}</strong>
-                      &nbsp;|&nbsp; 🌙 Night (8:30-11:30 PM): <strong style="color: #67e8f9;">${d.nightSentCount || 0}/${d.nightTarget || 20}</strong>
+                      ⏰ Shift (3:00 PM - 9:00 PM IST): <strong style="color: #34d399;">${d.dailySentCount || 0}/${d.dailyMaxLeads || 50}</strong>
                       &nbsp;|&nbsp; Cluster: <strong>${d.currentClusterCount || 0}/${d.clusterSize || 2}</strong>
                     </div>
                   </div>
@@ -350,7 +349,7 @@ app.get('/', (req, res) => {
               </form>
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="extreme_human">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'extreme_human' ? '#4f46e5' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">👤 Extreme Human (30 Day + 20 Night)</button>
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'extreme_human' ? '#4f46e5' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">👤 Extreme Human (3:00 PM - 9:00 PM IST)</button>
               </form>
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="fast">
@@ -362,7 +361,7 @@ app.get('/', (req, res) => {
               </form>
               <form method="POST" action="/api/settings/toggle-shift-shield" style="margin: 0;">
                 <button type="submit" class="btn" style="background: ${state.businessHoursShield ? '#047857' : '#d97706'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">
-                  ${state.businessHoursShield ? '🛡️ Shifts Active (2-6 PM & 8:30-11:30 PM)' : '⚡ 24/7 Dispatch (Sending Now)'}
+                  ${state.businessHoursShield ? '🛡️ Shift Active (3:00 PM - 9:00 PM IST)' : '⚡ 24/7 Dispatch (Sending Now)'}
                 </button>
               </form>
             </div>

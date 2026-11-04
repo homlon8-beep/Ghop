@@ -23,15 +23,14 @@ const CONFIG_FILE = path.join(__dirname, 'bot_config.json');
 function loadBotConfig() {
   const defaults = {
     dailyMaxLeadsPerDevice: 50,
-    afternoonTarget: 30, // 2:00 PM - 6:00 PM IST (30 msgs)
-    nightTarget: 20,     // 8:30 PM - 11:30 PM IST (20 msgs)
+    shiftTarget: 50,     // 3:00 PM - 9:00 PM IST (50 msgs)
     minMsgDelayMs: 45000,
     maxMsgDelayMs: 90000,
     minBreakMins: 14,
     maxBreakMins: 26,
     minClusterSize: 1,
     maxClusterSize: 3,
-    businessHoursShield: true, // Strict 2-6 PM (30) & 8:30-11:30 PM (20) IST
+    businessHoursShield: true, // Strict 3:00 PM - 9:00 PM IST
     pacingPreset: 'extreme_human'
   };
 
@@ -215,30 +214,15 @@ function getCurrentShiftInfo() {
   const { hour, minute, dateStr } = getIndianTimeParts();
   const timeInMinutes = hour * 60 + minute;
 
-  // Afternoon Shift: 2:00 PM (14:00) to 6:00 PM (18:00) -> 840 to 1080 mins
-  const isAfternoon = (timeInMinutes >= 840 && timeInMinutes < 1080);
+  // Active Working Hours: 3:00 PM (15:00) to 9:00 PM (21:00) IST -> 900 to 1260 mins
+  const isActiveShift = (timeInMinutes >= 900 && timeInMinutes < 1260);
 
-  // Night Shift: 8:30 PM (20:30) to 11:30 PM (23:30) -> 1230 to 1410 mins
-  const isNight = (timeInMinutes >= 1230 && timeInMinutes < 1410);
-
-  let currentShift = null;
-  let shiftName = 'Off-Shift Rest';
-  let shiftMax = 50;
-
-  if (isAfternoon) {
-    currentShift = 'afternoon';
-    shiftName = 'Afternoon Clinic (2 PM - 6 PM IST)';
-    shiftMax = botConfig.afternoonTarget || 30;
-  } else if (isNight) {
-    currentShift = 'night';
-    shiftName = 'Night Shift (8:30 PM - 11:30 PM IST)';
-    shiftMax = botConfig.nightTarget || 20;
-  }
+  let currentShift = isActiveShift ? 'clinic_shift' : null;
+  let shiftName = isActiveShift ? 'Active Clinic Shift (3:00 PM - 9:00 PM IST)' : 'Off-Shift Rest';
+  let shiftMax = botConfig.dailyMaxLeadsPerDevice || 50;
 
   return {
-    isAfternoon,
-    isNight,
-    isActiveShift: (isAfternoon || isNight),
+    isActiveShift,
     currentShift,
     shiftName,
     shiftMax,
@@ -257,16 +241,13 @@ function getNextShiftTimestamp() {
   const istDate = new Date(istStr);
   const target = new Date(istDate);
 
-  if (timeInMinutes < 840) {
-    // Before 2:00 PM -> Next is 2:00 PM today
-    target.setHours(14, 0, 0, 0);
-  } else if (timeInMinutes >= 840 && timeInMinutes < 1230) {
-    // Between 6:00 PM and 8:30 PM -> Next is 8:30 PM tonight
-    target.setHours(20, 30, 0, 0);
+  if (timeInMinutes < 900) {
+    // Before 3:00 PM -> Next is 3:00 PM today
+    target.setHours(15, 0, 0, 0);
   } else {
-    // After 11:30 PM -> Next is 2:00 PM tomorrow
+    // Past 9:00 PM -> Next is 3:00 PM tomorrow
     target.setDate(target.getDate() + 1);
-    target.setHours(14, 0, 0, 0);
+    target.setHours(15, 0, 0, 0);
   }
 
   const diffMs = target.getTime() - istDate.getTime();
@@ -381,34 +362,17 @@ async function runDeviceWorker(deviceId) {
 
     // 1. Device Daily Cap Check (50 leads/day total)
     if (state.dailySentCount >= currentCap) {
-      state.currentStatus = `Daily Cap Reached (${state.dailySentCount}/${currentCap}: 30 afternoon + 20 night). Resting safely until 2:00 PM IST tomorrow...`;
+      state.currentStatus = `Daily Cap Reached (${state.dailySentCount}/${currentCap} leads sent). Resting safely until 3:00 PM IST tomorrow...`;
       state.nextActionTime = getNextShiftTimestamp();
       await sleep(60000);
       continue;
     }
 
-    // 2. Strict Shift Enforcement (2:00 PM - 6:00 PM [30] & 8:30 PM - 11:30 PM [20] IST)
+    // 2. Strict Shift Enforcement (3:00 PM - 9:00 PM IST)
     if (botConfig.businessHoursShield !== false) {
       if (!shift.isActiveShift) {
         const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
-        state.currentStatus = `🌙 Rest Mode (Active 2-6 PM [30 msgs] & 8:30-11:30 PM [20 msgs] IST). Next shift at ${nextTimeStr}...`;
-        state.nextActionTime = getNextShiftTimestamp();
-        await sleep(60000);
-        continue;
-      }
-
-      // Check shift sub-allocations
-      if (shift.isAfternoon && (state.afternoonSentCount || 0) >= (botConfig.afternoonTarget || 30)) {
-        const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
-        state.currentStatus = `Afternoon Shift Complete (${state.afternoonSentCount}/30 sent). Evening rest until 8:30 PM IST night shift (${nextTimeStr})...`;
-        state.nextActionTime = getNextShiftTimestamp();
-        await sleep(60000);
-        continue;
-      }
-
-      if (shift.isNight && (state.nightSentCount || 0) >= (botConfig.nightTarget || 20)) {
-        const nextTimeStr = formatIndiaTime(getNextShiftTimestamp());
-        state.currentStatus = `Night Shift Complete (${state.nightSentCount}/20 sent). Full day quota reached. Sleeping until 2:00 PM IST tomorrow (${nextTimeStr})...`;
+        state.currentStatus = `🌙 Rest Mode (Active 3:00 PM - 9:00 PM IST). Next shift at ${nextTimeStr}...`;
         state.nextActionTime = getNextShiftTimestamp();
         await sleep(60000);
         continue;
@@ -636,7 +600,7 @@ function getQueueState() {
     isDaytime: shift.isActiveShift,
     currentShift: shift.currentShift,
     shiftName: shift.shiftName,
-    operatingHours: botConfig.businessHoursShield ? "2:00 PM - 6:00 PM (30) & 8:30 PM - 11:30 PM (20) IST" : "24/7 Human Dispatch",
+    operatingHours: botConfig.businessHoursShield ? "3:00 PM - 9:00 PM IST (50 leads/day)" : "24/7 Human Dispatch",
     pacingPreset: botConfig.pacingPreset || 'extreme_human',
     minMsgDelayMs: botConfig.minMsgDelayMs,
     maxMsgDelayMs: botConfig.maxMsgDelayMs,
