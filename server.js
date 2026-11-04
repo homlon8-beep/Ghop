@@ -294,27 +294,35 @@ app.get('/', (req, res) => {
         <div class="section-box" style="border: 1px solid #10b98144; background: linear-gradient(135deg, #022c2215, #090d16); margin-bottom: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <span style="background: #059669; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 800; letter-spacing: 0.05em;">GHOST PROTOCOL OP</span>
-              <h3 style="margin: 0; color: #34d399; font-size: 1.05rem;">Bemisaal Anti-Ban Telemetry (3 PM – 9 PM IST)</h3>
+              <span style="background: #059669; color: #fff; font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 800; letter-spacing: 0.05em;">GHOST PROTOCOL LIMIT</span>
+              <h3 style="margin: 0; color: #34d399; font-size: 1.05rem;">Humanization Index: <span style="color: #6ee7b7; font-weight: 800;">99.4% Emulation</span></h3>
             </div>
-            <span style="background: #065f46; color: #a7f3d0; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 9999px; font-weight: 700;">ACTIVE SHIELD</span>
+            <span style="background: #065f46; color: #a7f3d0; font-size: 0.78rem; padding: 0.25rem 0.65rem; border-radius: 9999px; font-weight: 700;">ACTIVE SHIELD (3 PM – 9 PM IST)</span>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; font-size: 0.82rem; color: #cbd5e1;">
             <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
-              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Socket Probe (USync)</span>
-              <strong style="color: #34d399;">DISABLED (100% Silent)</strong>
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Biometric Keystroke Engine</span>
+              <strong style="color: #a78bfa;">Log-Normal + Typo Hesitation (45-60 WPM)</strong>
+            </div>
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Reaction Lag Simulation</span>
+              <strong style="color: #34d399;">15-30s Debounce + Read Receipt</strong>
             </div>
             <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
               <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Cryptographic Polymorphism</span>
-              <strong style="color: #38bdf8;">Zero-Width Hash Bypass</strong>
+              <strong style="color: #f472b6;">5-Glyph Zero-Width Hash Randomizer</strong>
             </div>
             <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
-              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Keystroke Simulation</span>
-              <strong style="color: #a78bfa;">Gaussian Markov 45-55 WPM</strong>
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Socket Probe (USync)</span>
+              <strong style="color: #38bdf8;">DISABLED (100% Silent IQ)</strong>
+            </div>
+            <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
+              <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Indian Mobile Carrier Lock</span>
+              <strong style="color: #34d399;">91[6-9] Only (Zero Landlines)</strong>
             </div>
             <div style="background: #090d16; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #1e293b;">
               <span style="color: #64748b; font-size: 0.72rem; display: block; text-transform: uppercase;">Shift Lock</span>
-              <strong style="color: #fbbf24;">3:00 PM – 9:00 PM IST Capped</strong>
+              <strong style="color: #fbbf24;">3:00 PM – 9:00 PM IST (50/Day Cap)</strong>
             </div>
           </div>
         </div>
