@@ -4,7 +4,7 @@
  * live QR code stream, and authentic human AI reply handler.
  */
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -112,11 +112,20 @@ async function initDevice(deviceId, onReadyCallback) {
 
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
+  let waVersion = [2, 3000, 1043857760];
+  try {
+    const verResult = await fetchLatestBaileysVersion();
+    if (verResult && verResult.version) waVersion = verResult.version;
+  } catch (e) {}
+
   const sock = makeWASocket({
+    version: waVersion,
     auth: state,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false,
-    browser: Browsers.windows('Chrome')
+    browser: Browsers.windows('Chrome'),
+    syncFullHistory: false,
+    shouldSyncHistoryMessage: () => false
   });
 
   session.sock = sock;
@@ -372,10 +381,24 @@ async function initAllDevices(onReadyCallback) {
   }
 }
 
+function addStealthHashBypasser(text) {
+  if (!text) return '';
+  const zeroWidths = ['\u200B', '\u200C', '\u200D'];
+  const words = text.split(' ');
+  const modified = words.map(word => {
+    if (Math.random() < 0.25 && word.length > 3) {
+      const idx = Math.floor(1 + Math.random() * (word.length - 2));
+      const char = zeroWidths[Math.floor(Math.random() * zeroWidths.length)];
+      return word.slice(0, idx) + char + word.slice(idx);
+    }
+    return word;
+  });
+  return modified.join(' ');
+}
+
 /**
- * Send Text Message through a specific device (PURE SEND ONLY)
- * Zero presence subscribe, zero presence updates, zero chat mutations.
- * Looks like a standard human sending a message.
+ * Send Text Message through a specific device (PURE SEND ONLY WITH NATURAL PRESENCE)
+ * Natural typing delay + cryptographic hash bypasser. Zero socket probes.
  */
 async function sendTextMessage(deviceId, jid, text) {
   const session = devices.get(parseInt(deviceId, 10));
@@ -385,10 +408,22 @@ async function sendTextMessage(deviceId, jid, text) {
   }
 
   try {
-    // PURE SEND ONLY: Send directly through socket
-    await session.sock.sendMessage(jid, { text });
+    // 1. Natural Human Typing Presence (3-6s based on message length)
+    try { await session.sock.sendPresenceUpdate('composing', jid); } catch (e) {}
+    const typingTimeMs = Math.min(6500, Math.max(3000, Math.floor(text.length * 28 + Math.random() * 1200)));
+    await sleep(typingTimeMs);
+
+    // 2. Cryptographic Stealth: Inject randomized invisible zero-width markers
+    const stealthText = addStealthHashBypasser(text);
+
+    // 3. Send message
+    await session.sock.sendMessage(jid, { text: stealthText });
+
+    // 4. Mark paused
+    try { await session.sock.sendPresenceUpdate('paused', jid); } catch (e) {}
     return true;
   } catch (err) {
+    try { await session.sock.sendPresenceUpdate('paused', jid); } catch (e) {}
     console.error(`Error sending message on Device ${deviceId} to ${jid}:`, err.message);
     return false;
   }
