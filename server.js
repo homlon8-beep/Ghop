@@ -16,6 +16,7 @@ process.on('unhandledRejection', (reason) => {
 
 const express = require('express');
 const path = require('path');
+const XLSX = require('xlsx');
 const whatsapp = require('./whatsapp');
 const scraper = require('./scraper');
 const queue = require('./queue');
@@ -340,6 +341,14 @@ app.get('/', (req, res) => {
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
+                <input type="hidden" name="preset" value="ultra_fast">
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'ultra_fast' ? '#ef4444' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 800; border: 1px solid #ef4444;">🚀 Ultra-Fast (6-12s • No Breaks • 24/7)</button>
+              </form>
+              <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
+                <input type="hidden" name="preset" value="casual_fast">
+                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'casual_fast' ? '#0ea5e9' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700; border: 1px solid #0ea5e9;">⚡ Casual Fast (14-24s • 24/7)</button>
+              </form>
+              <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="extreme_human">
                 <button type="submit" class="btn" style="background: ${state.pacingPreset === 'extreme_human' ? '#4f46e5' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">👤 Extreme Human (30 Day + 20 Night)</button>
               </form>
@@ -350,10 +359,6 @@ app.get('/', (req, res) => {
               <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
                 <input type="hidden" name="preset" value="turbo">
                 <button type="submit" class="btn" style="background: ${state.pacingPreset === 'turbo' ? '#d97706' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">🚀 Turbo (20-35s)</button>
-              </form>
-              <form method="POST" action="/api/settings/mode-form" style="margin: 0;">
-                <input type="hidden" name="preset" value="balanced">
-                <button type="submit" class="btn" style="background: ${state.pacingPreset === 'balanced' ? '#dc2626' : '#1e293b'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">⚖️ Balanced (50-90s)</button>
               </form>
               <form method="POST" action="/api/settings/toggle-shift-shield" style="margin: 0;">
                 <button type="submit" class="btn" style="background: ${state.businessHoursShield ? '#047857' : '#d97706'}; color: #fff; padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700;">
@@ -394,7 +399,10 @@ app.get('/', (req, res) => {
               <h3 style="margin: 0; color: #fb7185;">🔥 Hot Replied Leads (${hotLeads.length})</h3>
               <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">Patients who engaged with consultation outreach. Ready to close via WhatsApp.</p>
             </div>
-            <a href="/api/leads/export-csv" class="btn" style="background: #e11d48; color: #fff; font-weight: 700; text-decoration: none;">📥 Download Hot Leads (.CSV)</a>
+            <div class="btn-group">
+              <a href="/api/leads/export-excel?filter=hot" class="btn" style="background: #10b981; color: #fff; font-weight: 700; text-decoration: none;">📗 Export Excel (.XLSX)</a>
+              <a href="/api/leads/export-csv" class="btn" style="background: #e11d48; color: #fff; font-weight: 700; text-decoration: none;">📥 Download Leads (.CSV)</a>
+            </div>
           </div>
           ${hotLeads.length === 0 ? '<p style="color: #64748b; font-size: 0.85rem;">No replies yet today. As soon as leads respond, they appear here instantly.</p>' : `
             <div style="max-height: 220px; overflow-y: auto; background: #090d16; border-radius: 8px; padding: 0.5rem;">
@@ -416,13 +424,24 @@ app.get('/', (req, res) => {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
               <h3 style="margin: 0; color: #38bdf8;">📋 All Discovered Leads List (${allLeads.length} Total in DB)</h3>
-              <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">All Indian patient numbers found by the scraper (excluding Delhi). Turn into a list or download below.</p>
+              <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">All Indian patient numbers found by the scraper (excluding Delhi). Export directly to Excel or Google Sheets below.</p>
             </div>
             <div class="btn-group">
-              <a href="/api/leads/export-all-csv" class="btn" style="background: #0284c7; color: #fff; font-weight: 700; text-decoration: none;">📥 Export All (.CSV)</a>
-              <a href="/api/leads/export-list-txt" class="btn" style="background: #0369a1; color: #fff; font-weight: 700; text-decoration: none;">📋 Download Phone List (.TXT)</a>
+              <a href="/api/leads/export-excel" class="btn" style="background: #10b981; color: #fff; font-weight: 700; text-decoration: none;">📗 Export Excel (.XLSX)</a>
+              <a href="/api/leads/export-google-sheets" class="btn" style="background: #0ea5e9; color: #fff; font-weight: 700; text-decoration: none;">📊 Google Sheets (.CSV)</a>
+              <a href="/api/leads/export-all-csv" class="btn" style="background: #0284c7; color: #fff; font-weight: 700; text-decoration: none;">📥 Standard (.CSV)</a>
+              <a href="/api/leads/export-list-txt" class="btn" style="background: #0369a1; color: #fff; font-weight: 700; text-decoration: none;">📋 Numbers (.TXT)</a>
             </div>
           </div>
+
+          <!-- Google Sheets Live Sync Helper -->
+          <details style="margin-bottom: 1rem; background: #064e3b15; padding: 0.75rem; border-radius: 8px; border: 1px solid #059669;">
+            <summary style="cursor: pointer; color: #34d399; font-weight: 700; font-size: 0.85rem;">📊 Google Sheets Live Auto-Sync Formula (=IMPORTDATA)</summary>
+            <div style="margin-top: 0.5rem; font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+              <p style="margin-bottom: 0.35rem;">Copy and paste this formula into cell <strong>A1</strong> of any Google Sheet to automatically stream all leads live:</p>
+              <input type="text" readonly style="width: 100%; background: #090d16; border: 1px solid #334155; color: #38bdf8; padding: 0.5rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem;" value='=IMPORTDATA("${detectedBaseUrl || 'http://' + (req.headers.host || 'localhost:3001')}/api/leads/google-sheets-csv")' onclick="this.select()">
+            </div>
+          </details>
 
           <details style="margin-bottom: 1rem; background: #090d16; padding: 0.75rem; border-radius: 8px; border: 1px solid #1e293b;">
             <summary style="cursor: pointer; color: #38bdf8; font-weight: 600; font-size: 0.85rem;">📄 Click to view copyable raw numbers list (${allLeads.length} numbers)</summary>
@@ -483,8 +502,14 @@ app.get('/', (req, res) => {
             Active Target: <strong>${(scraperStats.lastScrapedCity || 'Kanpur').toUpperCase()}</strong> (${scraperStats.lastScrapedNiche || 'Ayurvedic Treatment'})
           </p>
           <div class="btn-group">
+            <form method="POST" action="/api/scraper/trigger-ultra-fast-form" style="margin: 0;">
+              <button type="submit" class="btn" style="background: #f59e0b; color: #000; font-weight: 800; border: none; cursor: pointer;">🚀 Ultra-Fast Scrape (50+ Leads Parallel)</button>
+            </form>
             <form method="POST" action="/api/scraper/trigger-free-form" style="margin: 0;">
-              <button type="submit" class="btn btn-green">⚡ Run Yandex Fast Sweep (25+ Leads)</button>
+              <button type="submit" class="btn btn-green">⚡ Yandex Fast Sweep (25+ Leads)</button>
+            </form>
+            <form method="POST" action="/api/scraper/trigger-casual-form" style="margin: 0;">
+              <button type="submit" class="btn btn-outline">🌱 Casual Scrape (20 Leads)</button>
             </form>
             <form method="POST" action="${scraperStats.isPaused ? '/api/scraper/resume' : '/api/scraper/pause'}" style="margin: 0;">
               <button type="submit" class="btn btn-outline">${scraperStats.isPaused ? '▶️ Resume Auto-Scraper' : '⏸️ Pause Auto-Scraper'}</button>
@@ -547,6 +572,127 @@ app.get('/api/leads/export-list-txt', (req, res) => {
   res.setHeader('Content-Type', 'text/plain');
   res.setHeader('Content-Disposition', 'attachment; filename="bemisaal_phone_numbers.txt"');
   res.send(lines);
+});
+
+/**
+ * 1. Export Real Microsoft Excel (.xlsx) Sheet
+ * Generates an authentic binary XLSX workbook with auto-styled columns and tabs
+ */
+app.get('/api/leads/export-excel', (req, res) => {
+  const filter = req.query.filter || 'all';
+  const hotLeads = scraper.getHotRepliedLeads ? scraper.getHotRepliedLeads() : [];
+  const allLeads = scraper.getAllDiscoveredLeads ? scraper.getAllDiscoveredLeads('all') : [];
+
+  const wb = XLSX.utils.book_new();
+
+  // Tab 1: Hot Replied Leads
+  const hotRows = hotLeads.map(l => ({
+    'Mobile Number': String(l.phone || ''),
+    'Patient Name': l.name || 'Valued Patient',
+    'City': (l.city || 'India').toUpperCase(),
+    'Status': 'HOT REPLIED (Needs Consultation)',
+    'Last Replied / Updated': l.updated_at ? new Date(l.updated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Today',
+    'Direct WhatsApp Chat': `https://wa.me/${l.phone}`
+  }));
+  const wsHot = XLSX.utils.json_to_sheet(hotRows.length ? hotRows : [{ 'Mobile Number': 'No replies yet today', 'Status': 'Waiting for incoming replies' }]);
+  wsHot['!cols'] = [{ wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 32 }, { wch: 24 }, { wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, wsHot, 'Hot Replied Patients');
+
+  if (filter !== 'hot') {
+    // Tab 2: All Discovered Indian Health Leads
+    const allRows = allLeads.map(l => ({
+      'Mobile Number': String(l.phone || ''),
+      'Patient Name': l.name || 'Patient',
+      'City': (l.city || 'India').toUpperCase(),
+      'Target Query': l.query || 'Ayurvedic Wellness',
+      'Current Status': String(l.status || 'queued').toUpperCase(),
+      'Discovered Date': l.discoveredAt || '',
+      'Last Outreach Sent': l.lastSentAt || 'Not sent yet',
+      'Direct WhatsApp Chat': `https://wa.me/${l.phone}`
+    }));
+    const wsAll = XLSX.utils.json_to_sheet(allRows.length ? allRows : [{ 'Mobile Number': 'No leads in DB', 'Status': 'Run scraper' }]);
+    wsAll['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 30 }, { wch: 18 }, { wch: 24 }, { wch: 24 }, { wch: 35 }];
+    XLSX.utils.book_append_sheet(wb, wsAll, 'All Discovered Leads');
+  }
+
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  const filename = `bemisaal_leads_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+/**
+ * 2. Google Sheets Live Stream CSV Feed (=IMPORTDATA)
+ * Phone numbers are formatted with an apostrophe prefix so Google Sheets NEVER strips digits or corrupts them to scientific notation.
+ */
+app.get('/api/leads/google-sheets-csv', (req, res) => {
+  const allLeads = scraper.getAllDiscoveredLeads ? scraper.getAllDiscoveredLeads('all') : [];
+  let csv = 'Phone,Name,City,Query,Status,Direct_WhatsApp_Link\r\n';
+  for (const l of allLeads) {
+    const phone = `'${l.phone || ''}`;
+    const name = `"${(l.name || 'Patient').replace(/"/g, '""')}"`;
+    const city = `"${(l.city || 'India').replace(/"/g, '""')}"`;
+    const query = `"${(l.query || 'Ayurvedic Wellness').replace(/"/g, '""')}"`;
+    const status = (l.status || 'queued').toUpperCase();
+    const link = `https://wa.me/${l.phone}`;
+    csv += `${phone},${name},${city},${query},${status},${link}\r\n`;
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="bemisaal_google_sheets_feed.csv"');
+  res.send(csv);
+});
+
+/**
+ * 3. Export Specifically Formatted for Google Sheets Upload / Drag-and-Drop
+ */
+app.get('/api/leads/export-google-sheets', (req, res) => {
+  const allLeads = scraper.getAllDiscoveredLeads ? scraper.getAllDiscoveredLeads('all') : [];
+  let csv = 'Phone,Name,City,Status,Direct_WhatsApp_Link\r\n';
+  for (const l of allLeads) {
+    const phone = `'+${l.phone || ''}`;
+    const name = `"${(l.name || 'Valued Patient').replace(/"/g, '""')}"`;
+    const city = `"${(l.city || 'India').replace(/"/g, '""')}"`;
+    const status = (l.status || 'queued').toUpperCase();
+    const link = `https://wa.me/${l.phone}`;
+    csv += `${phone},${name},${city},${status},${link}\r\n`;
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="bemisaal_for_google_sheets.csv"');
+  res.send(csv);
+});
+
+/**
+ * 4. Google Sheets Direct Webhook Sync (Push All Leads to Google Sheet Apps Script)
+ */
+app.post('/api/leads/sync-google-sheets', async (req, res) => {
+  const webhookUrl = (req.body.webhookUrl || '').trim();
+  if (!webhookUrl || !webhookUrl.startsWith('http')) {
+    return res.status(400).json({ error: 'Valid Google Apps Script Webhook URL is required' });
+  }
+
+  const allLeads = scraper.getAllDiscoveredLeads ? scraper.getAllDiscoveredLeads('all') : [];
+  try {
+    const payload = allLeads.map(l => ({
+      phone: String(l.phone || ''),
+      name: l.name || 'Patient',
+      city: l.city || 'India',
+      status: l.status || 'queued',
+      link: `https://wa.me/${l.phone}`
+    }));
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leads: payload, source: 'Bemisaal Bot', syncedAt: new Date().toISOString() }),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    res.json({ success: true, count: payload.length, status: response.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/devices/:id/logout', async (req, res) => {
@@ -659,6 +805,24 @@ app.post('/api/scraper/pause', (req, res) => {
 app.post('/api/scraper/resume', (req, res) => {
   scraper.resumeScraper();
   res.redirect('/?scraper_resumed=true');
+});
+
+app.post('/api/scraper/trigger-ultra-fast-form', async (req, res) => {
+  try {
+    await scraper.triggerUltraFastScraper({ targetCount: 50 });
+  } catch (err) {
+    console.error('Ultra-Fast Scraper Error:', err);
+  }
+  res.redirect('/?scraper=ultra_fast_triggered');
+});
+
+app.post('/api/scraper/trigger-casual-form', async (req, res) => {
+  try {
+    await scraper.triggerCasualScraper({ targetCount: 20 });
+  } catch (err) {
+    console.error('Casual Scraper Error:', err);
+  }
+  res.redirect('/?scraper=casual_triggered');
 });
 
 app.post('/api/scraper/trigger-free-form', async (req, res) => {

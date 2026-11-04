@@ -56,6 +56,8 @@ function saveBotConfig(updates) {
   } catch (err) {
     console.error('Failed to save bot_config.json:', err.message);
   }
+  // Immediately wake up workers so changes take effect without waiting out deep breaks
+  wakeAllWorkers();
   return botConfig;
 }
 
@@ -65,7 +67,25 @@ function setDailyMaxLeadsPerDevice(count, preset = 'custom') {
 
   const updates = { dailyMaxLeadsPerDevice: num, pacingPreset: preset };
 
-  if (preset === 'extreme_human') {
+  if (preset === 'ultra_fast' || preset === 'extreme_fast' || preset === 'ultra') {
+    updates.minMsgDelayMs = 6000;
+    updates.maxMsgDelayMs = 12000;
+    updates.minBreakMins = 0;
+    updates.maxBreakMins = 0.1;
+    updates.afternoonTarget = 500;
+    updates.nightTarget = 500;
+    updates.businessHoursShield = false;
+    updates.dailyMaxLeadsPerDevice = Math.max(num, 200);
+  } else if (preset === 'casual_ultra' || preset === 'casual_fast') {
+    updates.minMsgDelayMs = 14000;
+    updates.maxMsgDelayMs = 24000;
+    updates.minBreakMins = 0.5;
+    updates.maxBreakMins = 1.5;
+    updates.afternoonTarget = 200;
+    updates.nightTarget = 200;
+    updates.businessHoursShield = false;
+    updates.dailyMaxLeadsPerDevice = Math.max(num, 100);
+  } else if (preset === 'extreme_human') {
     updates.minMsgDelayMs = 45000;
     updates.maxMsgDelayMs = 90000;
     updates.minBreakMins = 14;
@@ -134,6 +154,12 @@ let currentDay = new Date().toDateString();
 const deviceStates = new Map();
 
 function getRandomClusterLimit() {
+  if (botConfig.pacingPreset === 'ultra_fast' || botConfig.pacingPreset === 'extreme_fast' || botConfig.pacingPreset === 'ultra') {
+    return Math.floor(25 + Math.random() * 25); // 25 to 50 in a cluster
+  }
+  if (botConfig.pacingPreset === 'casual_ultra' || botConfig.pacingPreset === 'casual_fast' || botConfig.pacingPreset === 'turbo') {
+    return Math.floor(10 + Math.random() * 10); // 10 to 20 in a cluster
+  }
   // Real human behavior: mostly 2 messages, occasionally 1 or 3
   const roll = Math.random();
   if (roll < 0.25) return 1;
@@ -142,16 +168,23 @@ function getRandomClusterLimit() {
 }
 
 function getRandomInClusterDelayMs() {
-  // Realistic typing + reading pause inside a cluster: 45s to 90s
+  // Realistic typing + reading pause inside a cluster
   const min = botConfig.minMsgDelayMs || 45000;
   const max = botConfig.maxMsgDelayMs || 90000;
   return Math.floor(min + Math.random() * (max - min + 1));
 }
 
 function getRandomClusterBreakMs() {
-  // Deep random human break: 14 to 26 minutes (averages ~20 mins, exactly as LO requested)
-  const minMins = botConfig.minBreakMins || 14;
-  const maxMins = botConfig.maxBreakMins || 26;
+  if (botConfig.pacingPreset === 'ultra_fast' || botConfig.pacingPreset === 'extreme_fast' || botConfig.pacingPreset === 'ultra') {
+    return Math.floor(1000 + Math.random() * 2000); // 1 to 3 seconds break!
+  }
+  if (botConfig.pacingPreset === 'casual_ultra' || botConfig.pacingPreset === 'casual_fast') {
+    return Math.floor(30000 + Math.random() * 60000); // 30s to 1.5m
+  }
+  // Deep random human break: 14 to 26 minutes (averages ~20 mins)
+  const minMins = botConfig.minBreakMins !== undefined ? botConfig.minBreakMins : 14;
+  const maxMins = botConfig.maxBreakMins !== undefined ? botConfig.maxBreakMins : 26;
+  if (minMins === 0 && maxMins === 0) return 0;
   const mins = minMins + Math.random() * (maxMins - minMins);
   const jitterSecs = Math.floor(Math.random() * 60);
   return Math.floor(mins * 60 * 1000 + jitterSecs * 1000);
@@ -299,8 +332,28 @@ function getOrCreateDeviceState(deviceId) {
   return state;
 }
 
+const sleepInterrupts = new Set();
 async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => {
+    let timer = null;
+    const onInterrupt = () => {
+      if (timer) clearTimeout(timer);
+      sleepInterrupts.delete(onInterrupt);
+      resolve(true);
+    };
+    sleepInterrupts.add(onInterrupt);
+    timer = setTimeout(() => {
+      sleepInterrupts.delete(onInterrupt);
+      resolve(false);
+    }, ms);
+  });
+}
+
+function wakeAllWorkers() {
+  for (const interrupt of sleepInterrupts) {
+    try { interrupt(); } catch (e) {}
+  }
+  sleepInterrupts.clear();
 }
 
 /**
@@ -526,7 +579,8 @@ function pauseQueue() {
 
 function resumeQueue() {
   isPaused = false;
-  console.log('▶️ [Queue Worker] Resumed all devices');
+  wakeAllWorkers();
+  console.log('▶️ [Queue Worker] Resumed all devices (workers awakened)');
 }
 
 function getQueueState() {
@@ -609,5 +663,6 @@ module.exports = {
   saveBotConfig,
   getBotConfig,
   setDailyMaxLeadsPerDevice,
-  updatePacingConfig
+  updatePacingConfig,
+  wakeAllWorkers
 };

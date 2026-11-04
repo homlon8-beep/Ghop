@@ -1,13 +1,13 @@
 {
-  "dailyMaxLeadsPerDevice": 50,
-  "afternoonTarget": 30,
-  "nightTarget": 20,
-  "minMsgDelayMs": 45000,
-  "maxMsgDelayMs": 90000,
-  "minBreakMins": 14,
-  "maxBreakMins": 26,
+  "dailyMaxLeadsPerDevice": 100,
+  "afternoonTarget": 200,
+  "nightTarget": 200,
+  "minMsgDelayMs": 14000,
+  "maxMsgDelayMs": 24000,
+  "minBreakMins": 0.5,
+  "maxBreakMins": 1.5,
   "minClusterSize": 1,
   "maxClusterSize": 3,
-  "businessHoursShield": true,
-  "pacingPreset": "extreme_human"
+  "businessHoursShield": false,
+  "pacingPreset": "casual_fast"
 }
