@@ -789,7 +789,7 @@ app.post('/api/leads/add-form', (req, res) => {
       continue;
     }
 
-    // Try extracting name and phone (e.g. "Rahul 9876543210" or "9876543210 - Rahul")
+    // Strict 10-Digit Indian Mobile Filter (Must start with 6, 7, 8, or 9)
     const phoneMatch = trimmed.match(/[6-9]\d{9}/);
     if (phoneMatch) {
       const phone = phoneMatch[0];
@@ -800,7 +800,7 @@ app.post('/api/leads/add-form', (req, res) => {
         source: 'manual_dashboard'
       });
     } else {
-      leads.push({ phone: trimmed, source: 'manual_dashboard' });
+      console.log(`❌ [Add-Form Guard] Rejected non-Indian or invalid mobile: "${trimmed}"`);
     }
   }
 
@@ -948,11 +948,12 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📲 Open http://localhost:${PORT}/qr to link WhatsApp devices (Up to ${whatsapp.MAX_DEVICES})`);
   console.log(`=========================================================\n`);
 
-  // 0. Gents-Only Database Sanitation: Purge any female leads from queue
+  // 0. Gents-Only & India-Only Database Sanitation: Purge any non-Indian or female leads
   try {
     scraper.purgeFemaleLeads();
+    scraper.purgeNonIndianLeads();
   } catch (e) {
-    console.error('Female purge notice:', e.message);
+    console.error('Lead sanitation notice:', e.message);
   }
 
   // 1. Start autonomous 24/7 Yandex scraper

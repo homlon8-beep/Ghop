@@ -51,6 +51,26 @@ function purgeFemaleLeads() {
 }
 
 /**
+ * Strict India-Only Lead Sanitation
+ * Purges any non-Indian number or invalid exchange from the database
+ */
+function purgeNonIndianLeads() {
+  const db = loadDatabase();
+  const initialCount = db.leads.length;
+  db.leads = db.leads.filter(l => {
+    if (!l || !l.phone) return false;
+    const clean = String(l.phone).replace(/\D/g, '');
+    return clean.length === 12 && clean.startsWith('91') && /^[6-9]/.test(clean.slice(2));
+  });
+  const removed = initialCount - db.leads.length;
+  if (removed > 0) {
+    saveDatabase(db);
+    console.log(`🇮🇳 [India-Only Guard] Purged ${removed} non-Indian/invalid leads from database.`);
+  }
+  return removed;
+}
+
+/**
  * Permanent Sent History Tracker (Ensures NO recipient is EVER messaged twice)
  */
 function loadSentHistory() {
@@ -116,6 +136,8 @@ function loadDatabase() {
       const raw = fs.readFileSync(LEADS_FILE, 'utf8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.leads)) {
+        // Enforce 100% Indian mobile leads only (91 + 10 digits starting with 6, 7, 8, or 9)
+        parsed.leads = parsed.leads.filter(l => l && l.phone && String(l.phone).length === 12 && /^91[6-9]\d{9}$/.test(String(l.phone)));
         cachedDb = parsed;
         return cachedDb;
       }
@@ -131,6 +153,7 @@ function loadDatabase() {
       const parsedBackup = JSON.parse(rawBackup);
       if (parsedBackup && Array.isArray(parsedBackup.leads)) {
         console.log('✅ [DB Recovery] Recovered database from leads_db.backup.json');
+        parsedBackup.leads = parsedBackup.leads.filter(l => l && l.phone && String(l.phone).length === 12 && /^91[6-9]\d{9}$/.test(String(l.phone)));
         cachedDb = parsedBackup;
         return cachedDb;
       }
@@ -750,5 +773,6 @@ module.exports = {
   getScraperStats,
   formatWhatsAppJid,
   isFemaleContext,
-  purgeFemaleLeads
+  purgeFemaleLeads,
+  purgeNonIndianLeads
 };

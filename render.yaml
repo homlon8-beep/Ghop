@@ -2,7 +2,7 @@ services:
   - type: web
     name: bemisaal-lead-bot
     env: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: node --max-old-space-size=384 server.js
     envVars:
