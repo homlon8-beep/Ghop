@@ -14,8 +14,6 @@ services:
         sync: false
       - key: BRAND_NAME
         value: Bemisaal Wellness
-      - key: HELPLINE_NUMBER
-        value: 9990394794
       - key: BATCH_SIZE
         value: 15
       - key: DELAY_BETWEEN_MSGS_MS

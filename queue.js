@@ -31,6 +31,7 @@ function loadBotConfig() {
     minClusterSize: 1,
     maxClusterSize: 3,
     businessHoursShield: true, // Strict 3:00 PM - 9:00 PM IST
+    adaptiveVelocityRamp: true, // 15 Day 1 -> 30 Day 2 -> 50 Day 3+
     pacingPreset: 'extreme_human'
   };
 
@@ -131,6 +132,7 @@ function updatePacingConfig(updates = {}) {
     'nightTarget',
     'businessHoursShield',
     'dailyMaxLeadsPerDevice',
+    'adaptiveVelocityRamp',
     'pacingPreset'
   ];
 
@@ -337,13 +339,33 @@ function wakeAllWorkers() {
   sleepInterrupts.clear();
 }
 
+function getEffectiveDailyCap(deviceId) {
+  let cap = botConfig.dailyMaxLeadsPerDevice || 50;
+  if (botConfig.deviceLimits && botConfig.deviceLimits[String(deviceId)]) {
+    cap = parseInt(botConfig.deviceLimits[String(deviceId)], 10) || cap;
+  }
+  // Adaptive Velocity Ramp: Safe 24h/48h warm-up for newly linked QR sessions
+  if (botConfig.adaptiveVelocityRamp !== false) {
+    const dev = whatsapp.getDevice(deviceId);
+    if (dev && dev.connectedAt) {
+      const ageHours = (Date.now() - dev.connectedAt) / (1000 * 3600);
+      if (ageHours < 24) {
+        cap = Math.min(15, cap);
+      } else if (ageHours < 48) {
+        cap = Math.min(30, cap);
+      }
+    }
+  }
+  return cap;
+}
+
 /**
  * Worker loop for an individual WhatsApp device slot
  */
 async function runDeviceWorker(deviceId) {
   const state = getOrCreateDeviceState(deviceId);
-  const maxDaily = botConfig.dailyMaxLeadsPerDevice || 50;
-  console.log(`⚡ [Worker Device ${deviceId}] Started Extreme Human Dispatcher (30 afternoon 2-6 PM + 20 night 8:30-11:30 PM = ${maxDaily} total).`);
+  const maxDaily = getEffectiveDailyCap(deviceId);
+  console.log(`⚡ [Worker Device ${deviceId}] Started Extreme Human Dispatcher (Clinic Shift 3:00 PM - 9:00 PM IST | Cap: ${maxDaily} msgs/day).`);
 
   // Stagger startup so all devices don't fire at the exact same second
   await sleep((deviceId - 1) * 15000);
@@ -358,7 +380,7 @@ async function runDeviceWorker(deviceId) {
     checkAndResetDailyCounters();
 
     const shift = getCurrentShiftInfo();
-    const currentCap = botConfig.dailyMaxLeadsPerDevice || 50;
+    const currentCap = getEffectiveDailyCap(deviceId);
 
     // 1. Device Daily Cap Check (50 leads/day total)
     if (state.dailySentCount >= currentCap) {
@@ -460,15 +482,13 @@ async function runDeviceWorker(deviceId) {
         state.currentClusterCount = (state.currentClusterCount || 0) + 1;
         state.totalSentSession++;
         state.dailySentCount++;
-        if (shift.isAfternoon) state.afternoonSentCount = (state.afternoonSentCount || 0) + 1;
-        if (shift.isNight) state.nightSentCount = (state.nightSentCount || 0) + 1;
         state.consecutiveFailures = 0;
         sendSucceeded = true;
-        const currentCap = botConfig.dailyMaxLeadsPerDevice || 50;
-        const shiftInfoStr = shift.isAfternoon 
-          ? `Afternoon: ${state.afternoonSentCount}/30` 
-          : (shift.isNight ? `Night: ${state.nightSentCount}/20` : `Unrestricted: ${state.dailySentCount}/${currentCap}`);
-        console.log(`✅ [Real WhatsApp Sent by Device ${deviceId} (${state.currentClusterCount}/${state.currentClusterLimit} in cluster)] To +${lead.phone}. Shift: ${shiftInfoStr}. Today: ${state.dailySentCount}/${currentCap}`);
+        const currentCap = getEffectiveDailyCap(deviceId);
+        const shiftInfoStr = shift.isActiveShift 
+          ? `Clinic Shift (3-9 PM): ${state.dailySentCount}/${currentCap}` 
+          : `Unrestricted: ${state.dailySentCount}/${currentCap}`;
+        console.log(`✅ [Real WhatsApp Sent by Device ${deviceId} (${state.currentClusterCount}/${state.currentClusterLimit} in cluster)] To +${lead.phone}. ${shiftInfoStr}.`);
       } else {
         state.consecutiveFailures++;
         scraper.updateLeadStatus(lead.phone, 'failed', 'Socket send failure', deviceId);

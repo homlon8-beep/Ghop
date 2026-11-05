@@ -94,6 +94,7 @@ async function initDevice(deviceId, onReadyCallback) {
       qrDataUrl: null,
       isConnected: false,
       phone: null,
+      connectedAt: null,
       isReconnecting: false,
       pendingReplies: new Map(),
       conversationHistories: new Map()
@@ -162,11 +163,13 @@ async function initDevice(deviceId, onReadyCallback) {
       } else if (!shouldReconnect) {
         console.log(`❌ [WhatsApp Device ${id}] Session logged out. Open /qr?device=${id} to rescan.`);
         session.phone = null;
+        session.connectedAt = null;
       }
     } else if (connection === 'open') {
       session.isConnected = true;
       session.qrDataUrl = null;
       session.isReconnecting = false;
+      if (!session.connectedAt) session.connectedAt = Date.now();
       session.phone = sock.user?.id ? sock.user.id.split(':')[0] : 'Connected';
       console.log(`\n🎉 [WhatsApp Device ${id}] Connected successfully as +${session.phone}! Slot is LIVE.\n`);
       if (onReadyCallback) onReadyCallback(id);
